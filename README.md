@@ -6,7 +6,7 @@ Aplicación móvil multiplataforma (Android e iOS) para reservar mesas en Konys 
 
 **Avance estimado: ~50%**
 
-### ✅ Lo que ya está hecho
+###  Lo que ya está hecho
 - Estructura del proyecto creada con Expo Router.
 - Repositorio en GitHub con múltiples commits.
 - Pantalla de Inicio con diseño visual completo (imagen de fondo, logo KONYS, eslogan, horarios, botón "Reservar mesa", botón de administrador "A").
@@ -20,7 +20,7 @@ Aplicación móvil multiplataforma (Android e iOS) para reservar mesas en Konys 
 - Mockups de baja fidelidad (bocetos) en carpeta `/docs`.
 - Documento del proyecto en `/docs`.
 
-### ⏳ Lo que falta por hacer
+###  Lo que falta por hacer
 - Pantalla de reserva completa: elegir fecha, ver horarios libres/ocupados, llenar formulario y confirmar.
 - Pantalla de confirmación de reserva.
 - Módulo de administrador: acceso con PIN, gestión de mesas, horarios, reservas y carta.
