@@ -1,15 +1,7 @@
 import { useFocusEffect, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import {
-  Dimensions,
-  ImageBackground,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { Dimensions, ImageBackground, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { supabase } from '../services/supabase';
 
@@ -19,13 +11,12 @@ export const options = {
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
-// Ajustes visuales en un solo lugar
 const BORDE = 'rgba(255, 255, 255, 0.6)';
 const CAJA = 'rgba(0, 0, 0, 0.45)';
 const BOTON = '#F28C28';
 const BOTON_TEXTO = '#FFFFFF';
-const CIRCULO = 150; // diámetro del botón
-const ANILLO = 190; // diámetro del aro punteado
+const CIRCULO = 150;
+const ANILLO = 190;
 
 export default function Inicio() {
   const router = useRouter();
@@ -35,7 +26,6 @@ export default function Inicio() {
   const [error, setError] = useState<string | null>(null);
   const [hasNavigated, setHasNavigated] = useState(false);
 
-  // Leer mesas de Supabase al abrir la pantalla
   useEffect(() => {
     supabase
       .from('mesas')
@@ -49,7 +39,6 @@ export default function Inicio() {
       });
   }, []);
 
-  // Al volver a esta pantalla, reinicia el scroll y permite deslizar otra vez
   useFocusEffect(
     useCallback(() => {
       setHasNavigated(false);
@@ -57,7 +46,6 @@ export default function Inicio() {
     }, [])
   );
 
-  // Detectar deslizar hacia arriba para ir a la carta
   const handleScroll = (event: any) => {
     const offsetY = event.nativeEvent.contentOffset.y;
     if (offsetY > 100 && !hasNavigated) {
@@ -82,10 +70,8 @@ export default function Inicio() {
           style={styles.background}
           resizeMode="cover"
         >
-          {/* Overlay oscuro */}
           <View style={styles.overlay} />
 
-          {/* Botón A - Administrador */}
           <Pressable
             style={styles.adminButton}
             onPress={() => router.push('/admin')}
@@ -94,26 +80,22 @@ export default function Inicio() {
           </Pressable>
 
           <View style={styles.content}>
-            {/* Cuadro del logo */}
             <View style={styles.logoBox}>
               <Text style={styles.logoText}>KONYS</Text>
             </View>
 
-            {/* Lema */}
             <View style={styles.chip}>
               <Text style={styles.chipText}>La pizza más icónica</Text>
             </View>
 
-            {/* Horarios */}
             <View style={styles.chip}>
               <Text style={styles.chipText}>12:30–2:30 · 5–11 p. m.</Text>
             </View>
 
-            {/* Aro punteado + botón circular */}
             <View style={styles.anillo}>
               <Pressable
                 style={styles.reservarButton}
-                onPress={() => router.push('/reservar/mesa')}
+                onPress={() => router.push('/reservar')}
               >
                 <Text style={styles.reservarButtonText}>
                   Reservar{'\n'}mesa
@@ -121,10 +103,8 @@ export default function Inicio() {
               </Pressable>
             </View>
 
-            {/* Solo se ve si falla la conexión con Supabase */}
             {error && <Text style={styles.estadoError}>Error: {error}</Text>}
 
-            {/* Pista de deslizar: solo texto, no es botón */}
             <View style={styles.hint} pointerEvents="none">
               <Text style={styles.hintText}>Desliza: ver la carta</Text>
             </View>
