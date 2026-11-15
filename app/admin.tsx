@@ -65,7 +65,7 @@ export default function Admin() {
   const [entrando, setEntrando] = useState(false);
 
   // Pestaña seleccionada (solo para admin)
-  const [seccion, setSeccion] = useState<'reservas' | 'carta'>('reservas');
+  const [seccion, setSeccion] = useState<'reservas' | 'carta' | 'mesas'>('reservas');
 
   // Lista de reservas
   const [fecha, setFecha] = useState(fechaATexto(new Date()));
@@ -78,6 +78,19 @@ export default function Admin() {
   const [platos, setPlatos] = useState<any[]>([]);
   const [cargandoPlatos, setCargandoPlatos] = useState(false);
   const [errorPlatos, setErrorPlatos] = useState<string | null>(null);
+
+  // Sección Mesas (solo admin): listar, crear, editar, activar/desactivar
+  const [mesas, setMesas] = useState<any[]>([]);
+  const [cargandoMesas, setCargandoMesas] = useState(false);
+  const [errorMesas, setErrorMesas] = useState<string | null>(null);
+  const [intentoMesas, setIntentoMesas] = useState(0);
+  // Formulario para crear / editar una mesa
+  const [editandoId, setEditandoId] = useState<string | null>(null);
+  const [formNombre, setFormNombre] = useState('');
+  const [formZona, setFormZona] = useState<string>('terraza');
+  const [formCapacidad, setFormCapacidad] = useState(4);
+  const [formActiva, setFormActiva] = useState(true);
+  const [guardandoMesa, setGuardandoMesa] = useState(false);
 
   useEffect(() => {
     if (rol === 'mesero') setSeccion('reservas');
@@ -137,8 +150,10 @@ export default function Admin() {
     setRol(null);
     setReservas([]);
     setPlatos([]);
+    setMesas([]);
     setClave('');
     setSeccion('reservas');
+    resetFormMesa();
   }
 
   async function volverYCerrarSesion() {
@@ -146,8 +161,10 @@ export default function Admin() {
     setRol(null);
     setReservas([]);
     setPlatos([]);
+    setMesas([]);
     setClave('');
     setSeccion('reservas');
+    resetFormMesa();
     router.back();
   }
 
@@ -209,6 +226,33 @@ export default function Admin() {
     };
   }, [rol, seccion]);
 
+  // Cargar mesas cada vez que el admin abre la sección Mesas (o reintenta)
+  useEffect(() => {
+    if (rol !== 'admin' || seccion !== 'mesas') return;
+    let activo = true;
+
+    setCargandoMesas(true);
+    setErrorMesas(null);
+
+    supabase
+      .from('mesas')
+      .select('id, nombre, zona, capacidad, activa')
+      .order('nombre', { ascending: true })
+      .then(({ data, error }) => {
+        if (!activo) return;
+        if (error) {
+          setErrorMesas('No se pudieron cargar las mesas. Revisa tu conexión.');
+        } else {
+          setMesas(data ?? []);
+        }
+        setCargandoMesas(false);
+      });
+
+    return () => {
+      activo = false;
+    };
+  }, [rol, seccion, intentoMesas]);
+
   function pedirCancelacion(reserva: any) {
     Alert.alert(
       'Cancelar reserva',
@@ -249,6 +293,112 @@ export default function Admin() {
         actuales.map((p) => (p.id === plato.id ? { ...p, disponible: !nuevo } : p))
       );
     }
+  }
+
+  // ---------- MESAS: cargar, crear, editar, activar/desactivar ----------
+  function resetFormMesa() {
+    setEditandoId(null);
+    setFormNombre('');
+    setFormZona('terraza');
+    setFormCapacidad(4);
+    setFormActiva(true);
+  }
+
+  async function cargarMesas() {
+    setCargandoMesas(true);
+    setErrorMesas(null);
+    const { data, error } = await supabase
+      .from('mesas')
+      .select('id, nombre, zona, capacidad, activa')
+      .order('nombre', { ascending: true });
+    if (error) {
+      setErrorMesas('No se pudieron cargar las mesas. Revisa tu conexión.');
+    } else {
+      setMesas(data ?? []);
+    }
+    setCargandoMesas(false);
+  }
+
+  function iniciarEdicion(mesa: any) {
+    setEditandoId(mesa.id);
+    setFormNombre(mesa.nombre);
+    setFormZona(mesa.zona);
+    setFormCapacidad(mesa.capacidad);
+    setFormActiva(mesa.activa);
+  }
+
+  async function guardarMesa() {
+    const nombreLimpio = formNombre.trim();
+    if (!nombreLimpio) {
+      Alert.alert('Falta el nombre', 'Escribe un nombre para la mesa (ej. Mesa 3).');
+      return;
+    }
+    const capacidadNum = Math.max(1, Math.floor(Number(formCapacidad) || 0));
+    if (!capacidadNum) {
+      Alert.alert('Capacidad inválida', 'La capacidad debe ser al menos 1 persona.');
+      return;
+    }
+
+    setGuardandoMesa(true);
+    const payload = {
+      nombre: nombreLimpio,
+      zona: formZona,
+      capacidad: capacidadNum,
+      activa: formActiva,
+    };
+
+    let error;
+    if (editandoId) {
+      const res = await supabase.from('mesas').update(payload).eq('id', editandoId);
+      error = res.error;
+    } else {
+      const res = await supabase.from('mesas').insert(payload);
+      error = res.error;
+    }
+    setGuardandoMesa(false);
+
+    if (error) {
+      Alert.alert('Error', 'No se pudo guardar la mesa. Revisa tu conexión o permisos.');
+      return;
+    }
+    resetFormMesa();
+    setIntentoMesas((i) => i + 1);
+  }
+
+  async function alternarActivaMesa(mesa: any) {
+    const nueva = !mesa.activa;
+    setMesas((actuales) => actuales.map((m) => (m.id === mesa.id ? { ...m, activa: nueva } : m)));
+    const { error } = await supabase
+      .from('mesas')
+      .update({ activa: nueva })
+      .eq('id', mesa.id);
+    if (error) {
+      Alert.alert('Error', 'No se pudo cambiar el estado de la mesa.');
+      setMesas((actuales) => actuales.map((m) => (m.id === mesa.id ? { ...m, activa: !nueva } : m)));
+    }
+  }
+
+  async function eliminarMesa(mesa: any) {
+    Alert.alert(
+      'Eliminar mesa',
+      `¿Eliminar "${mesa.nombre}"? Las reservas se conservarán.`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Eliminar',
+          style: 'destructive',
+          onPress: async () => {
+            const { error } = await supabase.from('mesas').delete().eq('id', mesa.id);
+            if (error) {
+              Alert.alert('No se pudo eliminar', 'Revisa tu conexión o tus permisos.');
+              return;
+            }
+            if (editandoId === mesa.id) resetFormMesa();
+            setIntentoMesas((i) => i + 1);
+          },
+        },
+      ]
+    );
   }
 
   const puedeCancelar = rol === 'admin' || rol === 'mesero';
@@ -358,6 +508,14 @@ export default function Admin() {
                   >
                     <Text style={[styles.tabTexto, seccion === 'carta' && styles.tabTextoActivo]}>
                       Carta
+                    </Text>
+                  </Pressable>
+                  <Pressable
+                    style={[styles.tab, seccion === 'mesas' && styles.tabActivo]}
+                    onPress={() => setSeccion('mesas')}
+                  >
+                    <Text style={[styles.tabTexto, seccion === 'mesas' && styles.tabTextoActivo]}>
+                      Mesas
                     </Text>
                   </Pressable>
                 </View>
@@ -536,6 +694,187 @@ export default function Admin() {
                         </View>
                       );
                     })}
+                </>
+              )}
+                      {/* ============ SECCIÓN: MESAS (solo admin) ============ */}
+              {rol === 'admin' && seccion === 'mesas' && (
+                <>
+                  <Text style={styles.titulo}>Mesas</Text>
+                  <Text style={styles.subtitulo}>
+                    {editandoId ? 'Editando mesa' : 'Crea una nueva mesa'} · o selecciona una de la lista para editarla
+                  </Text>
+
+                  {/* Formulario crear / editar */}
+                  <View style={styles.mesaForm}>
+                    <Text style={styles.etiqueta}>Nombre</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={formNombre}
+                      onChangeText={setFormNombre}
+                      placeholder="Ej. Mesa 3"
+                      placeholderTextColor="rgba(255,255,255,0.45)"
+                      autoCapitalize="words"
+                      editable={!guardandoMesa}
+                    />
+
+                    <Text style={styles.etiqueta}>Zona</Text>
+                    <View style={styles.zonaFila}>
+                      {['terraza', 'salon'].map((z) => {
+                        const elegido = formZona === z;
+                        return (
+                          <Pressable
+                            key={z}
+                            style={[styles.zonaPill, elegido && styles.zonaPillActiva]}
+                            onPress={() => !guardandoMesa && setFormZona(z)}
+                          >
+                            <Text style={[styles.zonaPillTexto, elegido && styles.zonaPillTextoActiva]}>
+                              {NOMBRE_ZONA[z]}
+                            </Text>
+                          </Pressable>
+                        );
+                      })}
+                    </View>
+
+                    <View style={styles.capacidadFila}>
+                      <View style={styles.capacidadTextos}>
+                        <Text style={styles.etiqueta}>Capacidad</Text>
+                        <Text style={styles.capacidadSubtitulo}>Hasta cuántas personas</Text>
+                      </View>
+                      <View style={styles.capacidadControles}>
+                        <Pressable
+                          style={styles.botonContador}
+                          onPress={() => !guardandoMesa && setFormCapacidad(Math.max(1, formCapacidad - 1))}
+                        >
+                          <Text style={styles.contadorTexto}>−</Text>
+                        </Pressable>
+                        <Text style={styles.numeroCapacidad}>{formCapacidad}</Text>
+                        <Pressable
+                          style={styles.botonContador}
+                          onPress={() => !guardandoMesa && setFormCapacidad(Math.min(20, formCapacidad + 1))}
+                        >
+                          <Text style={styles.contadorTexto}>+</Text>
+                        </Pressable>
+                      </View>
+                    </View>
+
+                    <View style={styles.activaFila}>
+                      <View style={styles.activaTextos}>
+                        <Text style={styles.etiqueta}>Activa</Text>
+                        <Text style={styles.capacidadSubtitulo}>
+                          Si la apagas, el cliente no podrá reservarla desde la app
+                        </Text>
+                      </View>
+                      <View style={styles.activaControles}>
+                        <Pressable
+                          style={[styles.activoPill, formActiva && styles.activoPillActivo]}
+                          onPress={() => !guardandoMesa && setFormActiva(true)}
+                        >
+                          <Text style={[styles.activoPillTexto, formActiva && styles.activoPillTextoActivo]}>Activa</Text>
+                        </Pressable>
+                        <Pressable
+                          style={[styles.activoPill, !formActiva && styles.inactivoPillActivo]}
+                          onPress={() => !guardandoMesa && setFormActiva(false)}
+                        >
+                          <Text style={[styles.activoPillTexto, !formActiva && styles.inactivoPillTextoActivo]}>Inactiva</Text>
+                        </Pressable>
+                      </View>
+                    </View>
+
+                    <View style={styles.botonesFormulario}>
+                      {editandoId && (
+                        <Pressable
+                          style={[styles.botonSecundario, guardandoMesa && styles.botonDeshabilitado]}
+                          onPress={() => !guardandoMesa && resetFormMesa()}
+                        >
+                          <Text style={styles.textoBotonSecundario}>Cancelar</Text>
+                        </Pressable>
+                      )}
+                      <Pressable
+                        style={[styles.botonGuardar, guardandoMesa && styles.botonDeshabilitado]}
+                        onPress={guardarMesa}
+                        disabled={guardandoMesa}
+                      >
+                        {guardandoMesa ? (
+                          <ActivityIndicator color="#FFFFFF" />
+                        ) : (
+                          <Text style={styles.textoBotonGuardar}>
+                            {editandoId ? 'Guardar cambios' : 'Crear mesa'}
+                          </Text>
+                        )}
+                      </Pressable>
+                    </View>
+                  </View>
+
+                  {/* Encabezado de la lista */}
+                  <Text style={styles.listaTitulo}>Mesas existentes</Text>
+
+                  {cargandoMesas && (
+                    <ActivityIndicator size="large" color="#F28C28" style={styles.cargando} />
+                  )}
+
+                  {errorMesas && (
+                    <View style={styles.mensajeCard}>
+                      <Text style={styles.mensajeTexto}>{errorMesas}</Text>
+                      <Pressable style={styles.botonClaro} onPress={() => setIntentoMesas((i) => i + 1)}>
+                        <Text style={styles.textoBotonClaro}>Reintentar</Text>
+                      </Pressable>
+                    </View>
+                  )}
+
+                  {!cargandoMesas && mesas.length === 0 && !errorMesas && (
+                    <View style={styles.vacioMesa}>
+                      <Text style={styles.vacioEmoji}>🪑</Text>
+                      <Text style={styles.vacioTexto}>Aún no hay mesas</Text>
+                      <Text style={styles.vacioSub}>Crea la primera mesa con el formulario de arriba.</Text>
+                    </View>
+                  )}
+
+                  {!cargandoMesas &&
+                    !errorMesas &&
+                    mesas.map((mesa) => (
+                      <View key={mesa.id} style={styles.mesaFila}>
+                        <View style={styles.mesaIzq}>
+                          <View style={[styles.mesaCirculo, { backgroundColor: mesa.activa ? '#F28C28' : '#4A4A4A' }]}>
+                            <Text style={styles.mesaCirculoTexto}>
+                              {(mesa.nombre?.replace(/\D/g, '') || mesa.nombre.slice(0, 1)).slice(0, 2)}
+                            </Text>
+                          </View>
+                          <View style={styles.mesaTextos}>
+                            <Text style={styles.mesaNombre} numberOfLines={2}>
+                              {mesa.nombre}
+                            </Text>
+                            <Text style={styles.mesaDetalle}>
+                              {NOMBRE_ZONA[mesa.zona] ?? mesa.zona} · {mesa.capacidad} pers.
+                            </Text>
+                          </View>
+                        </View>
+
+                        <View style={styles.mesaAcciones}>
+                          <Pressable
+                            style={[styles.toggleActiva, mesa.activa ? styles.toggleApagada : styles.toggleEncendida]}
+                            onPress={() => alternarActivaMesa(mesa)}
+                          >
+                            <Text style={[styles.toggleActivaTexto, !mesa.activa && styles.toggleActivaTextoEncendido]}>
+                              {mesa.activa ? 'Activa' : 'Inactiva'}
+                            </Text>
+                          </Pressable>
+
+                          <Pressable
+                            style={styles.botonEditar}
+                            onPress={() => iniciarEdicion(mesa)}
+                          >
+                            <Text style={styles.botonEditarTexto}>Editar</Text>
+                          </Pressable>
+
+                          <Pressable
+                            style={styles.botonEliminar}
+                            onPress={() => eliminarMesa(mesa)}
+                          >
+                            <Text style={styles.botonEliminarTexto}>Borrar</Text>
+                          </Pressable>
+                        </View>
+                      </View>
+                    ))}
                 </>
               )}
             </>
@@ -807,4 +1146,166 @@ const styles = StyleSheet.create({
   chipAgotado: { backgroundColor: 'rgba(255,107,107,0.15)', borderColor: '#FF6B6B' },
   chipDisponibleTexto: { color: '#7EE2A5', fontWeight: '800', fontSize: 13 },
   chipAgotadoTexto: { color: '#FF8A80' },
+
+  /* ---------- Mesas (admin) ---------- */
+  mesaForm: {
+    backgroundColor: 'rgba(18,18,18,0.85)',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.14)',
+    padding: 18,
+    marginBottom: 22,
+  },
+  zonaFila: { flexDirection: 'row', gap: 10, marginBottom: 16 },
+  zonaPill: {
+    flex: 1,
+    height: 46,
+    borderRadius: 23,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.18)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  zonaPillActiva: {
+    backgroundColor: '#F28C28',
+    borderColor: '#FFFFFF',
+    borderWidth: 2,
+  },
+  zonaPillTexto: { color: '#C8C8C8', fontWeight: '700', fontSize: 15 },
+  zonaPillTextoActiva: { color: '#FFFFFF' },
+  capacidadFila: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+    marginBottom: 16,
+  },
+  capacidadTextos: { flex: 1 },
+  capacidadSubtitulo: { color: '#B5B5B5', fontSize: 12, marginTop: 2 },
+  capacidadControles: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  botonContador: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.22)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  contadorTexto: { color: '#FFFFFF', fontSize: 22, fontWeight: '800' },
+  numeroCapacidad: { color: '#FFFFFF', fontSize: 22, fontWeight: '800', minWidth: 28, textAlign: 'center' },
+  activaFila: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+    marginBottom: 16,
+  },
+  activaTextos: { flex: 1 },
+  activaControles: { flexDirection: 'row', gap: 6 },
+  activoPill: {
+    paddingHorizontal: 14,
+    height: 38,
+    borderRadius: 19,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.22)',
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    justifyContent: 'center',
+  },
+  activoPillActivo: { backgroundColor: '#4CAF50', borderColor: '#7EE2A5' },
+  activoPillTexto: { color: '#C8C8C8', fontWeight: '800', fontSize: 13 },
+  activoPillTextoActivo: { color: '#FFFFFF' },
+  inactivoPillActivo: { backgroundColor: 'rgba(255,107,107,0.2)', borderColor: '#FF6B6B' },
+  inactivoPillTextoActivo: { color: '#FFB0A8' },
+  botonesFormulario: { flexDirection: 'row', gap: 10 },
+  botonSecundario: {
+    flex: 1,
+    height: 50,
+    borderRadius: 25,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.22)',
+  },
+  textoBotonSecundario: { color: '#FFFFFF', fontWeight: '800', fontSize: 15 },
+  botonGuardar: {
+    flex: 2,
+    height: 50,
+    borderRadius: 25,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F28C28',
+  },
+  textoBotonGuardar: { color: '#FFFFFF', fontWeight: '800', fontSize: 16 },
+  listaTitulo: { color: '#FFFFFF', fontSize: 20, fontWeight: '800', marginBottom: 12 },
+  mesaFila: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: 'rgba(18,18,18,0.85)',
+    borderRadius: 18,
+    padding: 14,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.14)',
+    gap: 10,
+  },
+  mesaIzq: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
+  mesaCirculo: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.4)',
+  },
+  mesaCirculoTexto: { color: '#FFFFFF', fontWeight: '900', fontSize: 24 },
+  mesaTextos: { flex: 1 },
+  mesaNombre: { color: '#FFFFFF', fontSize: 16, fontWeight: '800' },
+  mesaDetalle: { color: '#C8C8C8', fontSize: 13, marginTop: 4 },
+  mesaAcciones: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  toggleActiva: {
+    paddingHorizontal: 10,
+    height: 34,
+    borderRadius: 17,
+    borderWidth: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  toggleEncendida: { backgroundColor: 'rgba(76,175,80,0.18)', borderColor: '#4CAF50' },
+  toggleApagada: { backgroundColor: 'rgba(255,107,107,0.15)', borderColor: '#FF6B6B' },
+  toggleActivaTexto: { color: '#FFB0A8', fontWeight: '800', fontSize: 12 },
+  toggleActivaTextoEncendido: { color: '#7EE2A5' },
+  botonEditar: {
+    paddingHorizontal: 12,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: 'rgba(242,140,40,0.25)',
+    borderWidth: 1,
+    borderColor: '#F28C28',
+    justifyContent: 'center',
+  },
+  botonEditarTexto: { color: '#FFFFFF', fontWeight: '800', fontSize: 12 },
+  botonEliminar: {
+    paddingHorizontal: 12,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: 'rgba(255,107,107,0.18)',
+    borderWidth: 1,
+    borderColor: '#FF6B6B',
+    justifyContent: 'center',
+  },
+  botonEliminarTexto: { color: '#FF9A94', fontWeight: '800', fontSize: 12 },
+  vacioMesa: {
+    alignItems: 'center',
+    paddingVertical: 40,
+    backgroundColor: 'rgba(18,18,18,0.7)',
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+  },
 });
