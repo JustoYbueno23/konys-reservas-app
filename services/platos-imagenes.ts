@@ -1,0 +1,44 @@
+// Mapa compartido: nombre del plato → imagen local
+// Lo usan la Carta del cliente y el Panel de administración
+
+export const PLATO_IMG: Record<string, any> = {
+  'Entrada mini Konitos': require('../assets/images/platos/entrada-mini-konitos.jpg'),
+  'Nachos Enchulados': require('../assets/images/platos/nachos-enchulados.jpg'),
+  'Salchipuplitos': require('../assets/images/platos/salchipuplitos.jpg'),
+  'Chezki Chicken': require('../assets/images/platos/chezki-chicken.jpg'),
+  'Bukara Ganadora Pizza Master': require('../assets/images/platos/bukara-ganadora.jpg'),
+  'Konys Dulcinea': require('../assets/images/platos/konys-dulcinea.jpg'),
+  'Colombianisma': require('../assets/images/platos/colombianisima.jpg'),
+  'Lasagna': require('../assets/images/platos/lasagna.jpg'),
+  'Ikónica': require('../assets/images/platos/iconica.jpg'),
+  'Carbonara': require('../assets/images/platos/carbonara.jpg'),
+  'Hawaiiana': require('../assets/images/platos/hawaiana.jpg'),
+  'Mexicana': require('../assets/images/platos/mexicana.jpg'),
+  'Chicken': require('../assets/images/platos/chicken.jpg'),
+  'Veggie': require('../assets/images/platos/veggie.jpg'),
+  'BBQ': require('../assets/images/platos/bbq.jpg'),
+  'Teriyork': require('../assets/images/platos/teriyork.jpg'),
+  'Especial': require('../assets/images/platos/especial.jpg'),
+  'Carnes (Auténtica Pepperoni)': require('../assets/images/platos/carnes.jpg'),
+  'Mar & Tierra': require('../assets/images/platos/mar-y-tierra.jpg'),
+  'Marinera': require('../assets/images/platos/marinera.jpg'),
+  'Italianisma': require('../assets/images/platos/italianisma.jpg'),
+  'Bonciola': require('../assets/images/platos/bonciola.jpg'),
+  'Combo Amigos X4': require('../assets/images/platos/combo-amigos-x4.jpg'),
+  'Combo Parche X6': require('../assets/images/platos/combo-parche-x6.jpg'),
+  'Desgranado de Carne': require('../assets/images/platos/desgranado-de-carne.jpg'),
+  'Desgranado Pollo': require('../assets/images/platos/desgranado-pollo.jpg'),
+  'Papas Locas': require('../assets/images/platos/papas-locas.jpg'),
+  'Chicken Fries Mini': require('../assets/images/platos/chicken-fries-mini.jpg'),
+  'Chodrino Mini': require('../assets/images/platos/chodofries-mini.jpg'),
+  'Salchichfries Mini': require('../assets/images/platos/salchichfries-mini.jpg'),
+  'Porción de Papas': require('../assets/images/platos/porcion-de-papas.jpg'),
+  'Lasaña (Sabor del Día)': require('../assets/images/platos/lasana.jpg'),
+  'MaracuMango': require('../assets/images/platos/maracumango.jpg'),
+  'Soda Frutos Rojos': require('../assets/images/platos/soda-frutos-rojos.jpg'),
+};
+
+export function imagenPlato(nombre: string | null | undefined) {
+  if (!nombre) return null;
+  return PLATO_IMG[nombre] ?? null;
+}

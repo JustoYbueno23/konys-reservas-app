@@ -4,16 +4,20 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Image,
   ImageBackground,
   Pressable,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   TextInput,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../services/supabase';
+import { imagenPlato } from '../services/platos-imagenes';
 import { fechaATexto, proximosDias } from '../utils/fechas';
 
 export const options = {
@@ -22,25 +26,25 @@ export const options = {
 
 const FONDO = require('../assets/images/FondoReservarMesa.png');
 
-const DIAS_CORTOS = ['Dom', 'Lun', 'Mar', 'MiÃ©', 'Jue', 'Vie', 'SÃ¡b'];
+const DIAS_CORTOS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 const MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
-const NOMBRE_ZONA: Record<string, string> = { terraza: 'Terraza', salon: 'SalÃ³n' };
+const NOMBRE_ZONA: Record<string, string> = { terraza: 'Terraza', salon: 'Salón' };
 
-const CATEGORIA_INFO: Record<string, { label: string; emoji: string }> = {
-  entradas: { label: 'Entradas', emoji: 'ðŸ¥Ÿ' },
-  'menu-infantil': { label: 'MenÃº Infantil', emoji: 'ðŸ‘¶' },
-  pizzas: { label: 'Pizzas', emoji: 'ðŸ•' },
-  desgranados: { label: 'Desgranados', emoji: 'ðŸ¥˜' },
-  papas: { label: 'Papas IkÃ³nicas', emoji: 'ðŸŸ' },
-  lasana: { label: 'LasaÃ±a', emoji: 'ðŸ' },
-  granizados: { label: 'Granizados', emoji: 'ðŸ§Š' },
-  sodas: { label: 'Sodas', emoji: 'ðŸ§ƒ' },
-  bebidas: { label: 'Bebidas FrÃ­as', emoji: 'ðŸ¥¤' },
-  cerveza: { label: 'Cerveza', emoji: 'ðŸº' },
-  cocteles: { label: 'CÃ³cteles', emoji: 'ðŸ¹' },
-  postres: { label: 'Postres', emoji: 'ðŸ¨' },
-  almuerzos: { label: 'MenÃº Almuerzos', emoji: 'ðŸ' },
-  congelados: { label: 'Congelados', emoji: 'â„ï¸' },
+const CATEGORIA_INFO: Record<string, { label: string; icon: keyof typeof Ionicons.glyphMap }> = {
+  entradas: { label: 'Entradas', icon: 'fast-food' },
+  'menu-infantil': { label: 'Menú Infantil', icon: 'happy' },
+  pizzas: { label: 'Pizzas', icon: 'pizza' },
+  desgranados: { label: 'Desgranados', icon: 'layers' },
+  papas: { label: 'Papas Ikónicas', icon: 'return-up-back' },
+  lasana: { label: 'Lasaña', icon: 'pizza' },
+  granizados: { label: 'Granizados', icon: 'snow' },
+  sodas: { label: 'Sodas', icon: 'water' },
+  bebidas: { label: 'Bebidas Frías', icon: 'cafe' },
+  cerveza: { label: 'Cerveza', icon: 'beer' },
+  cocteles: { label: 'Cócteles', icon: 'wine' },
+  postres: { label: 'Postres', icon: 'ice-cream' },
+  almuerzos: { label: 'Menú Almuerzos', icon: 'restaurant' },
+  congelados: { label: 'Congelados', icon: 'snow' },
 };
 
 function formatoPrecio(p: number) {
@@ -53,10 +57,23 @@ function formatoFechaLarga(fechaTexto: string) {
   return `${dia} ${d} ${MESES[m - 1]}`;
 }
 
+const COLORES = {
+  fondo: '#0D1826',
+  card: 'rgba(22, 28, 38, 0.92)',
+  cardSuave: 'rgba(255, 255, 255, 0.06)',
+  linea: 'rgba(255, 255, 255, 0.10)',
+  ambar: '#F2A03F',
+  crema: '#F5EFE6',
+  texto: '#F5EFE6',
+  textoSuave: '#9DA9B7',
+  verde: '#3ED598',
+  rojo: '#FF5A5A',
+};
+
 export default function Admin() {
   const router = useRouter();
 
-  // SesiÃ³n y rol
+  // Sesión y rol
   const [revisandoSesion, setRevisandoSesion] = useState(true);
   const [rol, setRol] = useState<string | null>(null);
   const [correo, setCorreo] = useState('');
@@ -64,22 +81,34 @@ export default function Admin() {
   const [errorLogin, setErrorLogin] = useState<string | null>(null);
   const [entrando, setEntrando] = useState(false);
 
-  // PestaÃ±a seleccionada (solo para admin)
+  // Pestaña seleccionada
   const [seccion, setSeccion] = useState<'reservas' | 'carta' | 'mesas' | 'horarios'>('reservas');
 
-  // Lista de reservas
+  // Reservas
   const [fecha, setFecha] = useState(fechaATexto(new Date()));
   const [reservas, setReservas] = useState<any[]>([]);
   const [cargandoLista, setCargandoLista] = useState(false);
   const [errorLista, setErrorLista] = useState<string | null>(null);
   const [intento, setIntento] = useState(0);
 
-  // SecciÃ³n Carta (solo admin)
+  // Carta
   const [platos, setPlatos] = useState<any[]>([]);
   const [cargandoPlatos, setCargandoPlatos] = useState(false);
   const [errorPlatos, setErrorPlatos] = useState<string | null>(null);
 
-  // SecciÃ³n Horarios (solo admin)
+  // Mesas
+  const [mesas, setMesas] = useState<any[]>([]);
+  const [cargandoMesas, setCargandoMesas] = useState(false);
+  const [errorMesas, setErrorMesas] = useState<string | null>(null);
+  const [intentoMesas, setIntentoMesas] = useState(0);
+  const [editandoMesaId, setEditandoMesaId] = useState<string | null>(null);
+  const [formNombre, setFormNombre] = useState('');
+  const [formZona, setFormZona] = useState<string>('terraza');
+  const [formCapacidad, setFormCapacidad] = useState(4);
+  const [formActiva, setFormActiva] = useState(true);
+  const [guardandoMesa, setGuardandoMesa] = useState(false);
+
+  // Horarios
   const [horarios, setHorarios] = useState<any[]>([]);
   const [cargandoHorarios, setCargandoHorarios] = useState(false);
   const [errorHorarios, setErrorHorarios] = useState<string | null>(null);
@@ -87,30 +116,17 @@ export default function Admin() {
   const [diaEditar, setDiaEditar] = useState<string>(() =>
     ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'][new Date().getDay()]
   );
-  const [mAlmuerzoInicio, setMAlmuerzoInicio] = useState('12:30');
-  const [mAlmuerzoFin, setMAlmuerzoFin] = useState('14:30');
-  const [mAlmuerzoDur, setMAlmuerzoDur] = useState('60');
-  const [mAlmuerzoAct, setMAlmuerzoAct] = useState(true);
-  const [mNocheInicio, setMNocheInicio] = useState('17:00');
-  const [mNocheFin, setMNocheFin] = useState('23:00');
-  const [mNocheDur, setMNocheDur] = useState('60');
-  const [mNocheAct, setMNocheAct] = useState(true);
+  const [almuerzoInicio, setAlmuerzoInicio] = useState('12:30');
+  const [almuerzoFin, setAlmuerzoFin] = useState('14:30');
+  const [almuerzoDur, setAlmuerzoDur] = useState('60');
+  const [almuerzoActivo, setAlmuerzoActivo] = useState(true);
+  const [nocheInicio, setNocheInicio] = useState('17:00');
+  const [nocheFin, setNocheFin] = useState('23:00');
+  const [nocheDur, setNocheDur] = useState('60');
+  const [nocheActivo, setNocheActivo] = useState(true);
   const [guardandoHorario, setGuardandoHorario] = useState(false);
 
-  // SecciÃ³n Mesas (solo admin): listar, crear, editar, activar/desactivar
-  const [mesas, setMesas] = useState<any[]>([]);
-  const [cargandoMesas, setCargandoMesas] = useState(false);
-  const [errorMesas, setErrorMesas] = useState<string | null>(null);
-  const [intentoMesas, setIntentoMesas] = useState(0);
-  // Formulario para crear / editar una mesa
-  const [editandoId, setEditandoId] = useState<string | null>(null);
-  const [formNombre, setFormNombre] = useState('');
-  const [formZona, setFormZona] = useState<string>('terraza');
-  const [formCapacidad, setFormCapacidad] = useState(4);
-  const [formActiva, setFormActiva] = useState(true);
-  const [guardandoMesa, setGuardandoMesa] = useState(false);
-
-  // SecciÃ³n Platos: gestiÃ³n completa (crear, editar, eliminar)
+  // Platos CRUD
   const [editandoPlatoId, setEditandoPlatoId] = useState<number | null>(null);
   const [formPlatoNombre, setFormPlatoNombre] = useState('');
   const [formPlatoCategoria, setFormPlatoCategoria] = useState<string>('pizzas');
@@ -131,7 +147,7 @@ export default function Admin() {
       .maybeSingle();
 
     if (error) {
-      setErrorLogin('No se pudo verificar tu perfil. Revisa tu conexiÃ³n.');
+      setErrorLogin('No se pudo verificar tu perfil. Revisa tu conexión.');
       return;
     }
     if (!data || !data.activo) {
@@ -156,7 +172,7 @@ export default function Admin() {
   async function iniciarSesion() {
     setErrorLogin(null);
     if (!correo.trim() || !clave) {
-      setErrorLogin('Escribe tu correo y tu contraseÃ±a.');
+      setErrorLogin('Escribe tu correo y tu contraseña.');
       return;
     }
     setEntrando(true);
@@ -165,7 +181,7 @@ export default function Admin() {
       password: clave,
     });
     if (error || !data.user) {
-      setErrorLogin('Correo o contraseÃ±a incorrectos.');
+      setErrorLogin('Correo o contraseña incorrectos.');
     } else {
       await verificarRol(data.user.id);
     }
@@ -174,6 +190,10 @@ export default function Admin() {
 
   async function cerrarSesion() {
     await supabase.auth.signOut();
+    reiniciarEstado();
+  }
+
+  function reiniciarEstado() {
     setRol(null);
     setReservas([]);
     setPlatos([]);
@@ -181,20 +201,17 @@ export default function Admin() {
     setClave('');
     setSeccion('reservas');
     resetFormMesa();
+    resetFormPlato();
+    limpiarFormularioHorarios();
   }
 
   async function volverYCerrarSesion() {
     await supabase.auth.signOut();
-    setRol(null);
-    setReservas([]);
-    setPlatos([]);
-    setMesas([]);
-    setClave('');
-    setSeccion('reservas');
-    resetFormMesa();
+    reiniciarEstado();
     router.back();
   }
 
+  // ============ RESERVAS ============
   useEffect(() => {
     if (!rol) return;
     let activo = true;
@@ -204,15 +221,13 @@ export default function Admin() {
       setErrorLista(null);
       const { data, error } = await supabase
         .from('reservas')
-        .select(
-          'id, cliente_nombre, cliente_contacto, num_personas, hora_inicio, hora_fin, estado, mesas(nombre, zona)'
-        )
+        .select('id, cliente_nombre, cliente_contacto, num_personas, hora_inicio, hora_fin, estado, mesas(nombre, zona)')
         .eq('fecha', fecha)
         .order('hora_inicio', { ascending: true });
 
       if (!activo) return;
       if (error) {
-        setErrorLista('No se pudieron cargar las reservas. Revisa tu conexiÃ³n.');
+        setErrorLista('No se pudieron cargar las reservas. Revisa tu conexión.');
       } else {
         setReservas(data ?? []);
       }
@@ -225,69 +240,11 @@ export default function Admin() {
     };
   }, [rol, fecha, intento]);
 
-  useEffect(() => {
-    if (rol !== 'admin' || seccion !== 'carta') return;
-    let activo = true;
-
-    async function cargarPlatos() {
-      setCargandoPlatos(true);
-      setErrorPlatos(null);
-      const { data, error } = await supabase
-        .from('platos')
-        .select('id, nombre, categoria, precio, disponible')
-        .order('categoria')
-        .order('precio');
-
-      if (!activo) return;
-      if (error) {
-        setErrorPlatos('No se pudieron cargar los platos. Revisa tu conexiÃ³n.');
-      } else {
-        setPlatos(data ?? []);
-      }
-      setCargandoPlatos(false);
-    }
-
-    cargarPlatos();
-    return () => {
-      activo = false;
-    };
-  }, [rol, seccion]);
-
-  // Cargar mesas cada vez que el admin abre la secciÃ³n Mesas (o reintenta)
-  useEffect(() => {
-    if (rol !== 'admin' || seccion !== 'mesas') return;
-    let activo = true;
-
-    setCargandoMesas(true);
-    setErrorMesas(null);
-
-    supabase
-      .from('mesas')
-      .select('id, nombre, zona, capacidad, activa')
-      .order('nombre', { ascending: true })
-      .then(({ data, error }) => {
-        if (!activo) return;
-        if (error) {
-          setErrorMesas('No se pudieron cargar las mesas. Revisa tu conexiÃ³n.');
-        } else {
-          setMesas(data ?? []);
-        }
-        setCargandoMesas(false);
-      });
-
-    return () => {
-      activo = false;
-    };
-  }, [rol, seccion, intentoMesas]);
-
   function pedirCancelacion(reserva: any) {
     Alert.alert(
       'Cancelar reserva',
-      `Â¿Cancelar la reserva de ${reserva.cliente_nombre} a las ${reserva.hora_inicio.slice(
-        0,
-        5
-      )}?`,
-      [{ text: 'No', style: 'cancel' }, { text: 'SÃ­, cancelar', style: 'destructive', onPress: () => cancelar(reserva.id) }]
+      `¿Cancelar la reserva de ${reserva.cliente_nombre} a las ${reserva.hora_inicio.slice(0, 5)}?`,
+      [{ text: 'No', style: 'cancel' }, { text: 'Sí, cancelar', style: 'destructive', onPress: () => cancelar(reserva.id) }]
     );
   }
 
@@ -299,196 +256,60 @@ export default function Admin() {
       .select();
 
     if (error || !data || data.length === 0) {
-      Alert.alert('No se pudo cancelar', 'Revisa tu conexiÃ³n o tus permisos.');
+      Alert.alert('No se pudo cancelar', 'Revisa tu conexión o tus permisos.');
       return;
     }
     setIntento((i) => i + 1);
   }
 
+  // ============ CARTA ============
+  useEffect(() => {
+    if (rol !== 'admin' || seccion !== 'carta') return;
+    let activo = true;
+
+    async function cargarPlatos() {
+      setCargandoPlatos(true);
+      setErrorPlatos(null);
+      const { data, error } = await supabase
+        .from('platos')
+        .select('id, nombre, categoria, precio, disponible, subcategoria, recomendado')
+        .order('categoria')
+        .order('precio');
+
+      if (!activo) return;
+      if (error) {
+        setErrorPlatos('No se pudieron cargar los platos. Revisa tu conexión.');
+      } else {
+        setPlatos(data ?? []);
+      }
+      setCargandoPlatos(false);
+    }
+
+    cargarPlatos();
+    return () => {
+      activo = false;
+    };
+  }, [rol, seccion, intento]);
+
   async function alternarDisponible(plato: any) {
     const nuevo = !plato.disponible;
-    setPlatos((actuales) =>
-      actuales.map((p) => (p.id === plato.id ? { ...p, disponible: nuevo } : p))
-    );
-    const { error } = await supabase
-      .from('platos')
-      .update({ disponible: nuevo })
-      .eq('id', plato.id);
+    setPlatos((actuales) => actuales.map((p) => (p.id === plato.id ? { ...p, disponible: nuevo } : p)));
+    const { error } = await supabase.from('platos').update({ disponible: nuevo }).eq('id', plato.id);
     if (error) {
       Alert.alert('Error', 'No se pudo cambiar la disponibilidad.');
-      setPlatos((actuales) =>
-        actuales.map((p) => (p.id === plato.id ? { ...p, disponible: !nuevo } : p))
-      );
+      setPlatos((actuales) => actuales.map((p) => (p.id === plato.id ? { ...p, disponible: !nuevo } : p)));
     }
   }
 
-  // ---------- MESAS: cargar, crear, editar, activar/desactivar ----------
-  function resetFormMesa() {
-    setEditandoId(null);
-    setFormNombre('');
-    setFormZona('terraza');
-    setFormCapacidad(4);
-    setFormActiva(true);
+  function resetFormPlato() {
+    setEditandoPlatoId(null);
+    setFormPlatoNombre('');
+    setFormPlatoCategoria('pizzas');
+    setFormPlatoPrecio('');
+    setFormPlatoDescripcion('');
+    setFormPlatoRecomendado(false);
   }
 
-  async function cargarMesas() {
-    setCargandoMesas(true);
-    setErrorMesas(null);
-    const { data, error } = await supabase
-      .from('mesas')
-      .select('id, nombre, zona, capacidad, activa')
-      .order('nombre', { ascending: true });
-    if (error) {
-      setErrorMesas('No se pudieron cargar las mesas. Revisa tu conexiÃ³n.');
-    } else {
-      setMesas(data ?? []);
-    }
-    setCargandoMesas(false);
-  }
-
-  function iniciarEdicion(mesa: any) {
-    setEditandoId(mesa.id);
-    setFormNombre(mesa.nombre);
-    setFormZona(mesa.zona);
-    setFormCapacidad(mesa.capacidad);
-    setFormActiva(mesa.activa);
-  }
-
-  async function guardarMesa() {
-    const nombreLimpio = formNombre.trim();
-    if (!nombreLimpio) {
-      Alert.alert('Falta el nombre', 'Escribe un nombre para la mesa (ej. Mesa 3).');
-      return;
-    }
-    const capacidadNum = Math.max(1, Math.floor(Number(formCapacidad) || 0));
-    if (!capacidadNum) {
-      Alert.alert('Capacidad invÃ¡lida', 'La capacidad debe ser al menos 1 persona.');
-      return;
-    }
-
-    setGuardandoMesa(true);
-    const payload = {
-      nombre: nombreLimpio,
-      zona: formZona,
-      capacidad: capacidadNum,
-      activa: formActiva,
-    };
-
-    let error;
-    if (editandoId) {
-      const res = await supabase.from('mesas').update(payload).eq('id', editandoId);
-      error = res.error;
-    } else {
-      const res = await supabase.from('mesas').insert(payload);
-      error = res.error;
-    }
-    setGuardandoMesa(false);
-
-    if (error) {
-      Alert.alert('Error', 'No se pudo guardar la mesa. Revisa tu conexiÃ³n o permisos.');
-      return;
-    }
-    resetFormMesa();
-    setIntentoMesas((i) => i + 1);
-  }
-
-  async function alternarActivaMesa(mesa: any) {
-    const nueva = !mesa.activa;
-    setMesas((actuales) => actuales.map((m) => (m.id === mesa.id ? { ...m, activa: nueva } : m)));
-    const { error } = await supabase
-      .from('mesas')
-      .update({ activa: nueva })
-      .eq('id', mesa.id);
-    if (error) {
-      Alert.alert('Error', 'No se pudo cambiar el estado de la mesa.');
-      setMesas((actuales) => actuales.map((m) => (m.id === mesa.id ? { ...m, activa: !nueva } : m)));
-    }
-  }
-
-  async function eliminarMesa(mesa: any) {
-    Alert.alert(
-      'Eliminar mesa',
-      `Â¿Eliminar "${mesa.nombre}"? Las reservas se conservarÃ¡n.`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Eliminar',
-          style: 'destructive',
-          onPress: async () => {
-            const { error } = await supabase.from('mesas').delete().eq('id', mesa.id);
-            if (error) {
-              Alert.alert('No se pudo eliminar', 'Revisa tu conexiÃ³n o tus permisos.');
-              return;
-            }
-            if (editandoId === mesa.id) resetFormMesa();
-            setIntentoMesas((i) => i + 1);
-          },
-        },
-      ]
-    );
-  }
-
-  // ---------- HORARIOS ----------
-  const DIAS_SEMANA_COMPLETOS = [
-    { clave: 'lunes', etiqueta: 'L' },
-    { clave: 'martes', etiqueta: 'M' },
-    { clave: 'miercoles', etiqueta: 'X' },
-    { clave: 'jueves', etiqueta: 'J' },
-    { clave: 'viernes', etiqueta: 'V' },
-    { clave: 'sabado', etiqueta: 'S' },
-    { clave: 'domingo', etiqueta: 'D' },
-  ];
-
-  // Formatea "12:30:00" -> "12:30"
-  function soloHora(t: string) {
-    return t ? t.slice(0, 5) : '';
-  }
-
-  function cargarHorarioAFormulario(h: any) {
-    if (h?.jornada === 'almuerzo') {
-      setMAlmuerzoInicio(soloHora(h.hora_inicio));
-      setMAlmuerzoFin(soloHora(h.hora_fin));
-      setMAlmuerzoDur(String(h.duracion_slot ?? 60));
-      setMAlmuerzoAct(h.activo !== false);
-    } else {
-      setMNocheInicio(soloHora(h.hora_inicio));
-      setMNocheFin(soloHora(h.hora_fin));
-      setMNocheDur(String(h.duracion_slot ?? 60));
-      setMNocheAct(h.activo !== false);
-    }
-  }
-
-  async function guardarHorarios() {
-    setGuardandoHorario(true);
-    const actualizar = async (jornada: string, inicio: string, fin: string, dur: string, act: boolean) => {
-      // Si existe la fila para ese dÃ­a y esa jornada, la actualiza. Si no, la crea.
-      const existentes = horarios.find((h) => h.dia_semana === diaEditar && h.jornada === jornada);
-      const payload = {
-        dia_semana: diaEditar,
-        jornada,
-        hora_inicio: inicio,
-        hora_fin: fin,
-        duracion_slot: Math.max(15, Number(dur) || 60),
-        activo: act,
-      };
-      if (existentes) {
-        return supabase.from('horarios').update(payload).eq('id', existentes.id);
-      }
-      return supabase.from('horarios').insert(payload);
-    };
-    const [res1, res2] = await Promise.all([
-      actualizar('almuerzo', mAlmuerzoInicio, mAlmuerzoFin, mAlmuerzoDur, mAlmuerzoAct),
-      actualizar('noche', mNocheInicio, mNocheFin, mNocheDur, mNocheAct),
-    ]);
-    if (res1.error || res2.error) {
-      Alert.alert('Error', 'No se pudieron guardar los horarios. Revisa tu conexiÃ³n o permisos.');
-    } else {
-      setIntentoHorarios((i) => i + 1);
-    }
-    setGuardandoHorario(false);
-  }
-
-  // ---------- PLATOS: crear, editar, eliminar ----------
   function iniciarEdicionPlato(plato: any) {
     setEditandoPlatoId(plato.id);
     setFormPlatoNombre(plato.nombre);
@@ -502,7 +323,7 @@ export default function Admin() {
     const nombreLimpio = formPlatoNombre.trim();
     const precioNumero = Number(formPlatoPrecio);
     if (!nombreLimpio || Number.isNaN(precioNumero) || precioNumero <= 0) {
-      Alert.alert('Datos invÃ¡lidos', 'Escribe un nombre y un precio mayor a 0.');
+      Alert.alert('Datos incompletos', 'Escribe un nombre y un precio mayor a 0.');
       return;
     }
     setGuardandoPlato(true);
@@ -517,7 +338,6 @@ export default function Admin() {
 
     let error;
     if (editandoPlatoId != null) {
-      // Al editar, no sobreescribir disponible
       const { disponible, ...sinDisponible } = payload;
       const res = await supabase.from('platos').update(sinDisponible).eq('id', editandoPlatoId);
       error = res.error;
@@ -528,22 +348,17 @@ export default function Admin() {
 
     setGuardandoPlato(false);
     if (error) {
-      Alert.alert('Error', 'No se pudo guardar el plato. Revisa tu conexiÃ³n o permisos.');
+      Alert.alert('Error', 'No se pudo guardar el plato.');
       return;
     }
-    setEditandoPlatoId(null);
-    setFormPlatoNombre('');
-    setFormPlatoCategoria('pizzas');
-    setFormPlatoPrecio('');
-    setFormPlatoDescripcion('');
-    setFormPlatoRecomendado(false);
-    setIntento((i) => i + 1); // recarga la lista de platos
+    resetFormPlato();
+    setIntento((i) => i + 1);
   }
 
   async function eliminarPlato(plato: any) {
     Alert.alert(
       'Eliminar plato',
-      `Â¿Eliminar "${plato.nombre}"? Esta acciÃ³n no se puede deshacer.`,
+      `¿Eliminar "${plato.nombre}"? Esta acción no se puede deshacer.`,
       [
         { text: 'Cancelar', style: 'cancel' },
         {
@@ -552,7 +367,7 @@ export default function Admin() {
           onPress: async () => {
             const { error } = await supabase.from('platos').delete().eq('id', plato.id);
             if (error) {
-              Alert.alert('No se pudo eliminar', 'Revisa tu conexiÃ³n o tus permisos.');
+              Alert.alert('No se pudo eliminar', 'Revisa tu conexión o tus permisos.');
               return;
             }
             setIntento((i) => i + 1);
@@ -562,34 +377,212 @@ export default function Admin() {
     );
   }
 
-  // ---------- Horarios: cargar ----------
+  // ============ MESAS ============
+  function resetFormMesa() {
+    setEditandoMesaId(null);
+    setFormNombre('');
+    setFormZona('terraza');
+    setFormCapacidad(4);
+    setFormActiva(true);
+  }
+
+  useEffect(() => {
+    if (rol !== 'admin' || seccion !== 'mesas') return;
+    let activo = true;
+
+    async function cargarMesas() {
+      setCargandoMesas(true);
+      setErrorMesas(null);
+      const { data, error } = await supabase
+        .from('mesas')
+        .select('id, nombre, zona, capacidad, activa')
+        .order('nombre');
+
+      if (!activo) return;
+      if (error) {
+        setErrorMesas('No se pudieron cargar las mesas.');
+      } else {
+        setMesas(data ?? []);
+      }
+      setCargandoMesas(false);
+    }
+
+    cargarMesas();
+    return () => {
+      activo = false;
+    };
+  }, [rol, seccion, intentoMesas]);
+
+  function iniciarEdicionMesa(mesa: any) {
+    setEditandoMesaId(mesa.id);
+    setFormNombre(mesa.nombre);
+    setFormZona(mesa.zona);
+    setFormCapacidad(mesa.capacidad);
+    setFormActiva(mesa.activa);
+  }
+
+  async function guardarMesa() {
+    const nombreLimpio = formNombre.trim();
+    if (!nombreLimpio) {
+      Alert.alert('Falta el nombre', 'Escribe un nombre para la mesa (ej. Mesa 3).');
+      return;
+    }
+    setGuardandoMesa(true);
+    const payload = {
+      nombre: nombreLimpio,
+      zona: formZona,
+      capacidad: Math.max(1, Math.floor(formCapacidad || 1)),
+      activa: formActiva,
+    };
+
+    let error;
+    if (editandoMesaId) {
+      const res = await supabase.from('mesas').update(payload).eq('id', editandoMesaId);
+      error = res.error;
+    } else {
+      const res = await supabase.from('mesas').insert(payload);
+      error = res.error;
+    }
+
+    setGuardandoMesa(false);
+    if (error) {
+      Alert.alert('Error', 'No se pudo guardar la mesa.');
+      return;
+    }
+    resetFormMesa();
+    setIntentoMesas((i) => i + 1);
+  }
+
+  async function alternarActivaMesa(mesa: any) {
+    const nueva = !mesa.activa;
+    setMesas((actuales) => actuales.map((m) => (m.id === mesa.id ? { ...m, activa: nueva } : m)));
+    const { error } = await supabase.from('mesas').update({ activa: nueva }).eq('id', mesa.id);
+    if (error) {
+      Alert.alert('Error', 'No se pudo cambiar el estado de la mesa.');
+      setMesas((actuales) => actuales.map((m) => (m.id === mesa.id ? { ...m, activa: !nueva } : m)));
+    }
+  }
+
+  async function eliminarMesa(mesa: any) {
+    Alert.alert('Eliminar mesa', `¿Eliminar "${mesa.nombre}"? Las reservas se conservarán.`, [
+      { text: 'Cancelar', style: 'cancel' },
+      {
+        text: 'Eliminar',
+        style: 'destructive',
+        onPress: async () => {
+          const { error } = await supabase.from('mesas').delete().eq('id', mesa.id);
+          if (error) {
+            Alert.alert('No se pudo eliminar', 'Revisa tu conexión o tus permisos.');
+            return;
+          }
+          if (editandoMesaId === mesa.id) resetFormMesa();
+          setIntentoMesas((i) => i + 1);
+        },
+      },
+    ]);
+  }
+
+  // ============ HORARIOS ============
+  const DIAS_SEMANA = [
+    { clave: 'lunes', etiqueta: 'Lun' },
+    { clave: 'martes', etiqueta: 'Mar' },
+    { clave: 'miercoles', etiqueta: 'Mié' },
+    { clave: 'jueves', etiqueta: 'Jue' },
+    { clave: 'viernes', etiqueta: 'Vie' },
+    { clave: 'sabado', etiqueta: 'Sáb' },
+    { clave: 'domingo', etiqueta: 'Dom' },
+  ];
+
+  function soloHora(t: string) {
+    return t ? t.slice(0, 5) : '';
+  }
+
+  function limpiarFormularioHorarios() {
+    setAlmuerzoInicio('12:30');
+    setAlmuerzoFin('14:30');
+    setAlmuerzoDur('60');
+    setAlmuerzoActivo(true);
+    setNocheInicio('17:00');
+    setNocheFin('23:00');
+    setNocheDur('60');
+    setNocheActivo(true);
+  }
+
+  function cargarFormularioHorarios(data: any[]) {
+    const alu = data.find((h) => h.dia_semana === diaEditar && h.jornada === 'almuerzo');
+    const noc = data.find((h) => h.dia_semana === diaEditar && h.jornada === 'noche');
+    if (alu) {
+      setAlmuerzoInicio(soloHora(alu.hora_inicio));
+      setAlmuerzoFin(soloHora(alu.hora_fin));
+      setAlmuerzoDur(String(alu.duracion_slot ?? 60));
+      setAlmuerzoActivo(alu.activo !== false);
+    }
+    if (noc) {
+      setNocheInicio(soloHora(noc.hora_inicio));
+      setNocheFin(soloHora(noc.hora_fin));
+      setNocheDur(String(noc.duracion_slot ?? 60));
+      setNocheActivo(noc.activo !== false);
+    }
+  }
+
   useEffect(() => {
     if (rol !== 'admin' || seccion !== 'horarios') return;
     let activo = true;
+
     setCargandoHorarios(true);
     setErrorHorarios(null);
+
     supabase
       .from('horarios')
       .select('*')
       .then(({ data, error }) => {
         if (!activo) return;
         if (error) {
-          setErrorHorarios('No se pudieron cargar los horarios. Revisa tu conexiÃ³n.');
+          setErrorHorarios('No se pudieron cargar los horarios. Revisa tu conexión.');
         } else {
           setHorarios(data ?? []);
-          // Cargar almuerzo y noche del dÃ­a seleccionado al formulario
-          const dia = (data ?? []).find((h: any) => h.dia_semana === diaEditar) ?? [];
-          const alu = dia.find((h: any) => h.jornada === 'almuerzo');
-          const noc = dia.find((h: any) => h.jornada === 'noche');
-          if (alu) cargarHorarioAFormulario(alu);
-          if (noc) cargarHorarioAFormulario(noc);
+          cargarFormularioHorarios(data ?? []);
         }
         setCargandoHorarios(false);
       });
+
     return () => {
       activo = false;
     };
   }, [rol, seccion, intentoHorarios, diaEditar]);
+
+  async function guardarHorarios() {
+    setGuardandoHorario(true);
+
+    const upsert = async (jornada: string, inicio: string, fin: string, dur: string, act: boolean) => {
+      const existente = horarios.find((h) => h.dia_semana === diaEditar && h.jornada === jornada);
+      const payload = {
+        dia_semana: diaEditar,
+        jornada,
+        hora_inicio: inicio,
+        hora_fin: fin,
+        duracion_slot: Math.max(15, Number(dur) || 60),
+        activo: act,
+      };
+      if (existente) {
+        return supabase.from('horarios').update(payload).eq('id', existente.id);
+      }
+      return supabase.from('horarios').insert(payload);
+    };
+
+    const [r1, r2] = await Promise.all([
+      upsert('almuerzo', almuerzoInicio, almuerzoFin, almuerzoDur, almuerzoActivo),
+      upsert('noche', nocheInicio, nocheFin, nocheDur, nocheActivo),
+    ]);
+
+    if (r1.error || r2.error) {
+      Alert.alert('Error', 'No se pudieron guardar los horarios. Revisa tu conexión o permisos.');
+    } else {
+      setIntentoHorarios((i) => i + 1);
+    }
+    setGuardandoHorario(false);
+  }
+
   const puedeCancelar = rol === 'admin' || rol === 'mesero';
   const dias = proximosDias(14);
   const confirmadas = reservas.filter((r) => r.estado === 'confirmada').length;
@@ -619,122 +612,140 @@ export default function Admin() {
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={styles.scrollContent}
         >
+          {/* Barra superior */}
           <View style={styles.barraSuperior}>
             <Pressable style={styles.botonBarra} onPress={volverYCerrarSesion}>
-              <Text style={styles.textoBarra}>â€¹ Volver</Text>
+              <Ionicons name="chevron-back" size={20} color="#F5EFE6" />
+              <Text style={styles.textoBarra}>Volver</Text>
             </Pressable>
             {rol && (
               <Pressable style={styles.botonBarra} onPress={cerrarSesion}>
-                <Text style={styles.textoBarra}>Cerrar sesiÃ³n</Text>
+                <Ionicons name="log-out-outline" size={18} color="#F5EFE6" />
+                <Text style={styles.textoBarra}>Cerrar sesión</Text>
               </Pressable>
             )}
           </View>
 
-          {revisandoSesion && <ActivityIndicator size="large" color="#F28C28" style={styles.cargando} />}
+          {revisandoSesion && <ActivityIndicator size="large" color={COLORES.ambar} style={styles.cargando} />}
 
-          {/* ---------- INICIO DE SESIÃ“N ---------- */}
+          {/* ============ LOGIN ============ */}
           {!revisandoSesion && !rol && (
             <View style={styles.loginCard}>
-              <Text style={styles.titulo}>Acceso del personal</Text>
-              <Text style={styles.subtitulo}>Inicia sesiÃ³n para ver las reservas</Text>
+              <View style={styles.loginEncabezado}>
+                <Ionicons name="restaurant" size={44} color={COLORES.ambar} />
+                <Text style={styles.logoKicker}>KONYS PIZZA</Text>
+                <Text style={styles.loginTitulo}>Acceso del personal</Text>
+                <Text style={styles.loginSubtexto}>
+                  Inicia sesión para gestionar reservas, mesas y carta.
+                </Text>
+              </View>
 
-              <Text style={styles.etiqueta}>Correo</Text>
-              <TextInput
-                style={styles.input}
-                value={correo}
-                onChangeText={setCorreo}
-                placeholder="correo@ejemplo.com"
-                placeholderTextColor="rgba(255,255,255,0.45)"
-                autoCapitalize="none"
-                keyboardType="email-address"
-                editable={!entrando}
-              />
+              <View style={styles.campo}>
+                <Ionicons name="mail-outline" size={20} color={COLORES.textoSuave} style={styles.campoIcono} />
+                <TextInput
+                  style={styles.input}
+                  value={correo}
+                  onChangeText={setCorreo}
+                  placeholder="correo@konys.com"
+                  placeholderTextColor="rgba(255,255,255,0.35)"
+                  autoCapitalize="none"
+                  keyboardType="email-address"
+                  editable={!entrando}
+                />
+              </View>
 
-              <Text style={styles.etiqueta}>ContraseÃ±a</Text>
-              <TextInput
-                style={styles.input}
-                value={clave}
-                onChangeText={setClave}
-                placeholder="ContraseÃ±a"
-                placeholderTextColor="rgba(255,255,255,0.45)"
-                secureTextEntry
-                autoCapitalize="none"
-                editable={!entrando}
-              />
+              <View style={styles.campo}>
+                <Ionicons name="lock-closed-outline" size={20} color={COLORES.textoSuave} style={styles.campoIcono} />
+                <TextInput
+                  style={styles.input}
+                  value={clave}
+                  onChangeText={setClave}
+                  placeholder="Contraseña"
+                  placeholderTextColor="rgba(255,255,255,0.35)"
+                  secureTextEntry
+                  autoCapitalize="none"
+                  editable={!entrando}
+                />
+              </View>
 
-              {errorLogin && <Text style={styles.textoError}>{errorLogin}</Text>}
+              {errorLogin && (
+                <View style={styles.alertaError}>
+                  <Ionicons name="alert-circle-outline" size={18} color={COLORES.rojo} />
+                  <Text style={styles.alertaErrorTexto}>{errorLogin}</Text>
+                </View>
+              )}
 
               <Pressable
-                style={[styles.botonPrincipal, entrando && styles.botonDeshabilitado]}
+                style={[styles.botonPrimario, entrando && styles.botonDeshabilitado]}
                 onPress={iniciarSesion}
                 disabled={entrando}
               >
                 {entrando ? (
-                  <ActivityIndicator color="#FFFFFF" />
+                  <ActivityIndicator color="#1A1A1A" />
                 ) : (
-                  <Text style={styles.textoPrincipal}>Entrar</Text>
+                  <View style={styles.botonPrimarioContenido}>
+                    <Ionicons name="log-in-outline" size={20} color="#1A1A1A" />
+                    <Text style={styles.botonPrimarioTexto}>Entrar</Text>
+                  </View>
                 )}
               </Pressable>
             </View>
           )}
 
-          {/* ---------- PANEL (con rol autenticado) ---------- */}
+          {/* ============ PANEL AUTENTICADO ============ */}
           {!revisandoSesion && rol && (
             <>
+              {/* Tabs */}
               {rol === 'admin' && (
-                <View style={styles.tabsBar}>
-                  <Pressable
-                    style={[styles.tab, seccion === 'reservas' && styles.tabActivo]}
-                    onPress={() => setSeccion('reservas')}
-                  >
-                    <Text style={[styles.tabTexto, seccion === 'reservas' && styles.tabTextoActivo]}>
-                      Reservas
-                    </Text>
-                  </Pressable>
-                  <Pressable
-                    style={[styles.tab, seccion === 'carta' && styles.tabActivo]}
-                    onPress={() => setSeccion('carta')}
-                  >
-                    <Text style={[styles.tabTexto, seccion === 'carta' && styles.tabTextoActivo]}>
-                      Carta
-                    </Text>
-                  </Pressable>
-                  <Pressable
-                    style={[styles.tab, seccion === 'mesas' && styles.tabActivo]}
-                    onPress={() => setSeccion('mesas')}
-                  >
-                    <Text style={[styles.tabTexto, seccion === 'mesas' && styles.tabTextoActivo]}>
-                      Mesas
-                    </Text>
-                  </Pressable>
-                  <Pressable
-                    style={[styles.tab, seccion === 'horarios' && styles.tabActivo]}
-                    onPress={() => setSeccion('horarios')}
-                  >
-                    <Text style={[styles.tabTexto, seccion === 'horarios' && styles.tabTextoActivo]}>
-                      Horarios
-                    </Text>
-                  </Pressable>
+                <View style={styles.tabs}>
+                  {(['reservas', 'carta', 'mesas', 'horarios'] as const).map((t) => {
+                    const activo = seccion === t;
+                    const tabConfig = {
+                      reservas: { icon: 'calendar-outline', label: 'Reservas' },
+                      carta: { icon: 'restaurant-outline', label: 'Carta' },
+                      mesas: { icon: 'grid-outline', label: 'Mesas' },
+                      horarios: { icon: 'time-outline', label: 'Horarios' },
+                    };
+                    return (
+                      <Pressable
+                        key={t}
+                        style={[styles.tab, activo && styles.tabActivo]}
+                        onPress={() => setSeccion(t as any)}
+                      >
+                        <Ionicons
+                          name={tabConfig[t].icon as any}
+                          size={18}
+                          color={activo ? '#1A1A1A' : COLORES.textoSuave}
+                        />
+                        <Text style={[styles.tabTexto, activo && styles.tabTextoActivo]}>
+                          {tabConfig[t].label}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
                 </View>
               )}
 
-              {/* ============ SECCIÃ“N: RESERVAS ============ */}
+              {/* ========== RESERVA (admin y mesero) ========== */}
               {(rol === 'mesero' || seccion === 'reservas') && (
                 <>
-                  <View style={styles.encabezadoReservas}>
+                  <View style={styles.encabezadoSeccion}>
                     <View>
-                      <Text style={styles.titulo}>Reservas</Text>
+                      <Text style={styles.kicker}>Avance del día</Text>
+                      <Text style={styles.tituloSeccion}>Reservas</Text>
                       <View style={styles.metaRow}>
-                        <Text style={styles.pillRol}>{rol === 'admin' ? 'Admin' : 'Mesero'}</Text>
+                        <View style={styles.pillRol}>
+                          <Ionicons name={rol === 'admin' ? 'shield-checkmark' : 'person'} size={12} color="#1A1A1A" />
+                          <Text style={styles.pillRolTexto}>{rol === 'admin' ? 'Admin' : 'Mesero'}</Text>
+                        </View>
                         <Text style={styles.metaTexto}>
-                          {confirmadas}{' '}
-                          {confirmadas === 1 ? 'confirmada hoy' : 'confirmadas hoy'}
+                          {confirmadas} {confirmadas === 1 ? 'confirmada' : 'confirmadas'} hoy
                         </Text>
                       </View>
                     </View>
                   </View>
 
-                  <Text style={styles.fechaTitulo}>{formatoFechaLarga(fecha)}</Text>
+                  <Text style={styles.fechaTexto}>{formatoFechaLarga(fecha)}</Text>
 
                   <ScrollView
                     horizontal
@@ -762,28 +773,23 @@ export default function Admin() {
                     })}
                   </ScrollView>
 
-                  {cargandoLista && (
-                    <ActivityIndicator size="large" color="#F28C28" style={styles.cargando} />
-                  )}
+                  {cargandoLista && <ActivityIndicator size="large" color={COLORES.ambar} style={styles.cargando} />}
 
                   {errorLista && (
-                    <View style={styles.mensajeCaja}>
-                      <View style={styles.mensajeCard}>
-                        <Text style={styles.mensajeTexto}>{errorLista}</Text>
-                        <Pressable style={styles.botonClaro} onPress={() => setIntento(intento + 1)}>
-                          <Text style={styles.textoBotonClaro}>Reintentar</Text>
-                        </Pressable>
-                      </View>
+                    <View style={styles.mensajeCard}>
+                      <Ionicons name="cloud-offline-outline" size={28} color={COLORES.rojo} />
+                      <Text style={styles.mensajeTexto}>{errorLista}</Text>
+                      <Pressable style={styles.botonClaro} onPress={() => setIntento(intento + 1)}>
+                        <Text style={styles.textoBotonClaro}>Reintentar</Text>
+                      </Pressable>
                     </View>
                   )}
 
                   {!cargandoLista && !errorLista && reservas.length === 0 && (
                     <View style={styles.vacioCaja}>
-                      <Text style={styles.vacioEmoji}>ðŸ½ï¸</Text>
-                      <Text style={styles.vacioTexto}>No hay reservas para este dÃ­a</Text>
-                      <Text style={styles.vacioSub}>
-                        Cuando alguien reserve desde la app aparecerÃ¡ aquÃ­.
-                      </Text>
+                      <Ionicons name="restaurant-outline" size={52} color={COLORES.textoSuave} />
+                      <Text style={styles.vacioTexto}>No hay reservas para este día</Text>
+                      <Text style={styles.vacioSub}>Cuando alguien reserve desde la app aparecerá aquí.</Text>
                     </View>
                   )}
 
@@ -792,7 +798,7 @@ export default function Admin() {
                     reservas.map((r) => {
                       const cancelada = r.estado === 'cancelada';
                       return (
-                        <View key={r.id} style={[styles.tarjeta, cancelada && styles.tarjetaCancelada]}>
+                        <View key={r.id} style={[styles.tarjetaReserva, cancelada && styles.tarjetaCancelada]}>
                           <View
                             style={[
                               styles.acentoLateral,
@@ -801,23 +807,35 @@ export default function Admin() {
                           />
                           <View style={styles.tarjetaContenido}>
                             <View style={styles.tarjetaCabecera}>
-                              <Text style={styles.hora}>
-                                {r.hora_inicio.slice(0, 5)} â€“ {r.hora_fin.slice(0, 5)}
-                              </Text>
-                              <Text style={[styles.estado, cancelada && styles.estadoCancelada]}>
-                                {cancelada ? 'CANCELADA' : 'CONFIRMADA'}
-                              </Text>
+                              <View style={styles.horaBloque}>
+                                <Ionicons name="time-outline" size={16} color={COLORES.textoSuave} />
+                                <Text style={styles.hora}>
+                                  {r.hora_inicio.slice(0, 5)} – {r.hora_fin.slice(0, 5)}
+                                </Text>
+                              </View>
+                              <View style={[styles.estadoPill, cancelada && styles.estadoCancelada]}>
+                                <Text style={[styles.estadoPillTexto, cancelada && styles.estadoCanceladaTexto]}>
+                                  {cancelada ? 'CANCELADA' : 'CONFIRMADA'}
+                                </Text>
+                              </View>
                             </View>
 
                             <Text style={styles.cliente}>{r.cliente_nombre}</Text>
-                            <Text style={styles.detalle}>
-                              {r.mesas?.nombre ?? 'Mesa'} Â· {NOMBRE_ZONA[r.mesas?.zona] ?? r.mesas?.zona ?? ''} Â·{' '}
-                              {r.num_personas} {r.num_personas === 1 ? 'persona' : 'personas'}
-                            </Text>
-                            <Text style={styles.detalle}>Tel: {r.cliente_contacto ?? 'â€”'}</Text>
+                            <View style={styles.detalleFila}>
+                              <Ionicons name="grid-outline" size={16} color={COLORES.textoSuave} />
+                              <Text style={styles.detalle}>
+                                {r.mesas?.nombre ?? 'Mesa'} · {r.num_personas}{' '}
+                                {r.num_personas === 1 ? 'persona' : 'personas'}
+                              </Text>
+                            </View>
+                            <View style={styles.detalleFila}>
+                              <Ionicons name="call-outline" size={16} color={COLORES.textoSuave} />
+                              <Text style={styles.detalle}>{r.cliente_contacto ?? '—'}</Text>
+                            </View>
 
                             {puedeCancelar && !cancelada && (
                               <Pressable style={styles.botonCancelar} onPress={() => pedirCancelacion(r)}>
+                                <Ionicons name="close-circle-outline" size={18} color="#FF9A94" />
                                 <Text style={styles.textoCancelar}>Cancelar reserva</Text>
                               </Pressable>
                             )}
@@ -828,126 +846,139 @@ export default function Admin() {
                 </>
               )}
 
-              {/* ============ SECCIÃ“N: CARTA (solo admin) ============ */}
+              {/* ========== CARTA (admin) ========== */}
               {rol === 'admin' && seccion === 'carta' && (
                 <>
-                  <Text style={styles.titulo}>Carta</Text>
-                  <Text style={styles.subtitulo}>
-                    {editandoPlatoId != null ? 'Editando plato' : 'Agrega un plato nuevo'} o cambia Disponible/Agotado
-                  </Text>
+                  <View style={styles.encabezadoSeccion}>
+                    <View>
+                      <Text style={styles.kicker}>Administración</Text>
+                      <Text style={styles.tituloSeccion}>Carta</Text>
+                      <Text style={styles.metaTexto}>
+                        {platos.length} platos registrados · {platos.filter((p) => p.disponible).length} disponibles
+                      </Text>
+                    </View>
+                  </View>
 
-                  {/* Formulario crear / editar plato */}
-                  <View style={styles.mesaForm}>
-                    <Text style={styles.etiqueta}>Nombre</Text>
+                  {/* Formulario Crear/Editar plato */}
+                  <View style={styles.formCard}>
+                    <View style={styles.formEncabezado}>
+                      <Ionicons
+                        name={editandoPlatoId != null ? 'create-outline' : 'add-circle-outline'}
+                        size={20}
+                        color={COLORES.ambar}
+                      />
+                      <Text style={styles.formTitulo}>
+                        {editandoPlatoId != null ? 'Editar plato' : 'Nuevo plato'}
+                      </Text>
+                    </View>
+
+                    <Text style={styles.campoLabel}>Nombre</Text>
                     <TextInput
-                      style={styles.input}
+                      style={styles.inputSimple}
                       value={formPlatoNombre}
                       onChangeText={setFormPlatoNombre}
                       placeholder="Ej. Hawaiiana"
-                      placeholderTextColor="rgba(255,255,255,0.45)"
+                      placeholderTextColor="rgba(255,255,255,0.35)"
                       editable={!guardandoPlato}
                     />
 
-                    <Text style={styles.etiqueta}>CategorÃ­a</Text>
-                    <View style={styles.chipsFila}>
+                    <Text style={styles.campoLabel}>Categoría</Text>
+                    <View style={styles.categoriaGrid}>
                       {Object.keys(CATEGORIA_INFO).map((clave) => {
-                        const elegido = formPlatoCategoria === clave;
+                        const sel = formPlatoCategoria === clave;
                         const info = CATEGORIA_INFO[clave];
                         return (
                           <Pressable
                             key={clave}
-                            style={[styles.chip, elegido && styles.chipToggle]}
+                            style={[styles.categoriaPill, sel && styles.categoriaPillActiva]}
                             onPress={() => !guardandoPlato && setFormPlatoCategoria(clave)}
                           >
-                            <Text style={[styles.chipTexto, elegido && styles.chipTextoActivo]}>
-                              {info.emoji} {info.label}
+                            <Ionicons
+                              name={info.icon as any}
+                              size={14}
+                              color={sel ? '#1A1A1A' : COLORES.texto}
+                            />
+                            <Text style={[styles.categoriaPillTexto, sel && styles.categoriaPillTextoActiva]}>
+                              {info.label}
                             </Text>
                           </Pressable>
                         );
                       })}
                     </View>
 
-                    <View style={styles.capacidadFila}>
-                      <View style={styles.capacidadTextos}>
-                        <Text style={styles.etiqueta}>Precio (COP)</Text>
+                    <View style={styles.filaPrecioRecomendado}>
+                      <View style={styles.campoPrecio}>
+                        <Text style={styles.campoLabel}>Precio (COP)</Text>
+                        <TextInput
+                          style={styles.inputSimple}
+                          value={formPlatoPrecio}
+                          onChangeText={setFormPlatoPrecio}
+                          placeholder="27900"
+                          placeholderTextColor="rgba(255,255,255,0.35)"
+                          keyboardType="number-pad"
+                          editable={!guardandoPlato}
+                        />
                       </View>
-                      <TextInput
-                        style={[styles.input, styles.inputPrecio]}
-                        value={formPlatoPrecio}
-                        onChangeText={setFormPlatoPrecio}
-                        placeholder="27900"
-                        placeholderTextColor="rgba(255,255,255,0.45)"
-                        keyboardType="number-pad"
-                        editable={!guardandoPlato}
-                      />
+                      <View style={styles.campoSwitch}>
+                        <Text style={styles.campoLabel}>Recomendado</Text>
+                        <Switch
+                          value={formPlatoRecomendado}
+                          onValueChange={(v) => {
+                            if (!guardandoPlato) setFormPlatoRecomendado(v);
+                          }}
+                          trackColor={{ false: '#3A4452', true: COLORES.ambar }}
+                          thumbColor="#F5EFE6"
+                        />
+                      </View>
                     </View>
 
-                    <Text style={styles.etiqueta}>DescripciÃ³n (opcional)</Text>
+                    <Text style={styles.campoLabel}>Descripción (opcional)</Text>
                     <TextInput
-                      style={styles.input}
+                      style={styles.inputSimple}
                       value={formPlatoDescripcion}
                       onChangeText={setFormPlatoDescripcion}
-                      placeholder="Ej. JamÃ³n, piÃ±a y queso mozzarella"
-                      placeholderTextColor="rgba(255,255,255,0.45)"
+                      placeholder="Ej. Jamón, piña y queso mozzarella"
+                      placeholderTextColor="rgba(255,255,255,0.35)"
                       editable={!guardandoPlato}
                     />
-
-                    <Pressable
-                      style={styles.activaFila}
-                      onPress={() => !guardandoPlato && setFormPlatoRecomendado(!formPlatoRecomendado)}
-                    >
-                      <Text style={styles.etiqueta}>â­ Recomendado</Text>
-                      <View style={[styles.switchRecomendado, formPlatoRecomendado && styles.switchRecomendadoActivo]}>
-                        <Text style={[styles.switchRecomendadoTexto, formPlatoRecomendado && styles.switchRecomendadoTextoActivo]}>
-                          {formPlatoRecomendado ? 'SÃ­' : 'No'}
-                        </Text>
-                      </View>
-                    </Pressable>
 
                     <View style={styles.botonesFormulario}>
                       {editandoPlatoId != null && (
                         <Pressable
-                          style={[styles.botonSecundario, guardandoPlato && styles.botonDeshabilitado]}
-                          onPress={() => {
-                            if (guardandoPlato) return;
-                            setEditandoPlatoId(null);
-                            setFormPlatoNombre('');
-                            setFormPlatoCategoria('pizzas');
-                            setFormPlatoPrecio('');
-                            setFormPlatoDescripcion('');
-                            setFormPlatoRecomendado(false);
-                          }}
+                          style={styles.botonSecundario}
+                          onPress={() => !guardandoPlato && resetFormPlato()}
                         >
-                          <Text style={styles.textoBotonSecundario}>Cancelar</Text>
+                          <Text style={styles.botonSecundarioTexto}>Cancelar</Text>
                         </Pressable>
                       )}
                       <Pressable
-                        style={[styles.botonGuardar, guardandoPlato && styles.botonDeshabilitado, editandoPlatoId == null && { flex: 1 }]}
+                        style={[styles.botonGuardar, guardandoPlato && styles.botonDeshabilitado]}
                         onPress={guardarPlato}
                         disabled={guardandoPlato}
                       >
                         {guardandoPlato ? (
-                          <ActivityIndicator color="#FFFFFF" />
+                          <ActivityIndicator color="#1A1A1A" />
                         ) : (
-                          <Text style={styles.textoBotonGuardar}>
-                            {editandoPlatoId != null ? 'Guardar cambios' : 'Agregar plato'}
-                          </Text>
+                          <View style={styles.botonGuardarContenido}>
+                            <Ionicons name="checkmark-circle-outline" size={20} color="#1A1A1A" />
+                            <Text style={styles.botonGuardarTexto}>
+                              {editandoPlatoId != null ? 'Guardar cambios' : 'Agregar plato'}
+                            </Text>
+                          </View>
                         )}
                       </Pressable>
                     </View>
                   </View>
 
-                  {cargandoPlatos && <ActivityIndicator size="large" color="#F28C28" style={styles.cargando} />}
+                  {cargandoPlatos && <ActivityIndicator size="large" color={COLORES.ambar} style={styles.cargando} />}
 
                   {errorPlatos && (
-                    <View style={styles.mensajeCaja}>
-                      <View style={styles.mensajeCard}>
-                        <Text style={styles.mensajeTexto}>{errorPlatos}</Text>
-                        <Text style={styles.mensajeTexto}></Text>
-                        <Pressable style={styles.botonClaro} onPress={() => setSeccion('carta')}>
-                          <Text style={styles.textoBotonClaro}>Reintentar</Text>
-                        </Pressable>
-                      </View>
+                    <View style={styles.mensajeCard}>
+                      <Ionicons name="cloud-offline-outline" size={28} color={COLORES.rojo} />
+                      <Text style={styles.mensajeTexto}>{errorPlatos}</Text>
+                      <Pressable style={styles.botonClaro} onPress={() => setIntento((i) => i + 1)}>
+                        <Text style={styles.textoBotonClaro}>Reintentar</Text>
+                      </Pressable>
                     </View>
                   )}
 
@@ -957,75 +988,92 @@ export default function Admin() {
                       const info = CATEGORIA_INFO[cat];
                       return (
                         <View key={cat} style={styles.grupo}>
-                          <Text style={styles.grupoTitulo}>
-                            {info ? `${info.emoji}  ${info.label}` : cat}
-                          </Text>
+                          <View style={styles.grupoEncabezado}>
+                            <Ionicons name={(info?.icon as any) ?? 'pizza'} size={20} color={COLORES.ambar} />
+                            <Text style={styles.grupoTitulo}>{info?.label ?? cat}</Text>
+                            <View style={styles.grupoContador}>
+                              <Text style={styles.grupoContadorTexto}>{grupos[cat].length}</Text>
+                            </View>
+                          </View>
 
-                          {grupos[cat].map((plato: any) => (
-                            <View key={plato.id} style={styles.platoFila}>
-                              <View style={styles.platoInfo}>
-                                <Text style={styles.platoNombre} numberOfLines={2}>
-                                  {plato.recomendado ? 'â­ ' : ''}{plato.nombre}
-                                </Text>
-                                <Text style={styles.platoPrecio}>
-                                  {formatoPrecio(plato.precio)}
-                                </Text>
-                              </View>
-
-                              <View style={styles.platoAcciones}>
+                          {grupos[cat].map((plato: any) => {
+                            const img = imagenPlato(plato.nombre);
+                            return (
+                              <View key={plato.id} style={styles.platoFila}>
+                                <View style={styles.platoImagen}>
+                                  {img ? (
+                                    <Image source={img} style={styles.platoImagenFuente} />
+                                  ) : (
+                                    <Ionicons name={(info?.icon as any) ?? 'pizza'} size={28} color={COLORES.textoSuave} />
+                                  )}
+                                </View>
+                                <View style={styles.platoInfo}>
+                                  <Text style={styles.platoNombre} numberOfLines={2}>
+                                    {plato.recomendado ? '★ ' : ''}{plato.nombre}
+                                  </Text>
+                                  <Text style={styles.platoPrecio}>{formatoPrecio(plato.precio)}</Text>
+                                </View>
                                 <Pressable
-                                  style={[
-                                    styles.chipDisponible,
-                                    plato.disponible ? styles.chipOk : styles.chipAgotado,
-                                  ]}
+                                  style={[styles.chipDisponibilidad, plato.disponible ? styles.chipOk : styles.chipAgotado]}
                                   onPress={() => alternarDisponible(plato)}
                                 >
-                                  <Text
-                                    style={[
-                                      styles.chipDisponibleTexto,
-                                      !plato.disponible && styles.chipAgotadoTexto,
-                                    ]}
-                                  >
+                                  <Ionicons
+                                    name={plato.disponible ? 'checkmark' : 'close'}
+                                    size={14}
+                                    color={plato.disponible ? COLORES.verde : COLORES.rojo}
+                                  />
+                                  <Text style={[styles.chipTexto, plato.disponible ? styles.chipTextoOk : styles.chipTextoAgotado]}>
                                     {plato.disponible ? 'Disponible' : 'Agotado'}
                                   </Text>
                                 </Pressable>
-
-                                <Pressable style={styles.botonIcono} onPress={() => iniciarEdicionPlato(plato)}>
-                                  <Text style={styles.botonIconoTexto}>âœï¸</Text>
+                                <Pressable style={styles.iconoBoton} onPress={() => iniciarEdicionPlato(plato)}>
+                                  <Ionicons name="pencil-outline" size={18} color={COLORES.ambar} />
                                 </Pressable>
-                                <Pressable style={styles.botonIcono} onPress={() => eliminarPlato(plato)}>
-                                  <Text style={styles.botonIconoTexto}>ðŸ—‘ï¸</Text>
+                                <Pressable style={styles.iconoBotonRojo} onPress={() => eliminarPlato(plato)}>
+                                  <Ionicons name="trash-outline" size={18} color={COLORES.rojo} />
                                 </Pressable>
                               </View>
-                            </View>
-                          ))}
+                            );
+                          })}
                         </View>
                       );
                     })}
                 </>
               )}
-                      {/* ============ SECCIÃ“N: MESAS (solo admin) ============ */}
+
+              {/* ========== MESAS (admin) ========== */}
               {rol === 'admin' && seccion === 'mesas' && (
                 <>
-                  <Text style={styles.titulo}>Mesas</Text>
-                  <Text style={styles.subtitulo}>
-                    {editandoId ? 'Editando mesa' : 'Crea una nueva mesa'} Â· o selecciona una de la lista para editarla
-                  </Text>
+                  <View style={styles.encabezadoSeccion}>
+                    <View>
+                      <Text style={styles.kicker}>Administración</Text>
+                      <Text style={styles.tituloSeccion}>Mesas</Text>
+                      <Text style={styles.metaTexto}>
+                        {mesas.filter((m) => m.activa).length} activas de {mesas.length} mesas
+                      </Text>
+                    </View>
+                  </View>
 
-                  {/* Formulario crear / editar */}
-                  <View style={styles.mesaForm}>
-                    <Text style={styles.etiqueta}>Nombre</Text>
+                  {/* Formulario Crear/Editar mesa */}
+                  <View style={styles.formCard}>
+                    <View style={styles.formEncabezado}>
+                      <Ionicons name="grid-outline" size={20} color={COLORES.ambar} />
+                      <Text style={styles.formTitulo}>
+                        {editandoMesaId ? 'Editar mesa' : 'Nueva mesa'}
+                      </Text>
+                    </View>
+
+                    <Text style={styles.campoLabel}>Nombre</Text>
                     <TextInput
-                      style={styles.input}
+                      style={styles.inputSimple}
                       value={formNombre}
                       onChangeText={setFormNombre}
                       placeholder="Ej. Mesa 3"
-                      placeholderTextColor="rgba(255,255,255,0.45)"
-                      autoCapitalize="words"
+                      placeholderTextColor="rgba(255,255,255,0.35)"
                       editable={!guardandoMesa}
                     />
 
-                    <Text style={styles.etiqueta}>Zona</Text>
+                    <Text style={styles.campoLabel}>Zona</Text>
                     <View style={styles.zonaFila}>
                       {['terraza', 'salon'].map((z) => {
                         const elegido = formZona === z;
@@ -1035,6 +1083,11 @@ export default function Admin() {
                             style={[styles.zonaPill, elegido && styles.zonaPillActiva]}
                             onPress={() => !guardandoMesa && setFormZona(z)}
                           >
+                            <Ionicons
+                              name={z === 'terraza' ? 'leaf-outline' : 'home-outline'}
+                              size={16}
+                              color={elegido ? '#1A1A1A' : COLORES.texto}
+                            />
                             <Text style={[styles.zonaPillTexto, elegido && styles.zonaPillTextoActiva]}>
                               {NOMBRE_ZONA[z]}
                             </Text>
@@ -1043,58 +1096,59 @@ export default function Admin() {
                       })}
                     </View>
 
-                    <View style={styles.capacidadFila}>
+                    <View style={styles.filaCapacidad}>
                       <View style={styles.capacidadTextos}>
-                        <Text style={styles.etiqueta}>Capacidad</Text>
-                        <Text style={styles.capacidadSubtitulo}>Hasta cuÃ¡ntas personas</Text>
+                        <Text style={styles.campoLabel}>Capacidad</Text>
+                        <Text style={styles.capacidadAyuda}>Hasta cuántas personas</Text>
                       </View>
                       <View style={styles.capacidadControles}>
                         <Pressable
-                          style={styles.botonContador}
+                          style={styles.stepButton}
                           onPress={() => !guardandoMesa && setFormCapacidad(Math.max(1, formCapacidad - 1))}
                         >
-                          <Text style={styles.contadorTexto}>âˆ’</Text>
+                          <Ionicons name="remove" size={22} color={COLORES.texto} />
                         </Pressable>
-                        <Text style={styles.numeroCapacidad}>{formCapacidad}</Text>
+                        <Text style={styles.capacidadNumero}>{formCapacidad}</Text>
                         <Pressable
-                          style={styles.botonContador}
+                          style={styles.stepButton}
                           onPress={() => !guardandoMesa && setFormCapacidad(Math.min(20, formCapacidad + 1))}
                         >
-                          <Text style={styles.contadorTexto}>+</Text>
+                          <Ionicons name="add" size={22} color={COLORES.texto} />
                         </Pressable>
                       </View>
                     </View>
 
-                    <View style={styles.activaFila}>
+                    <View style={styles.filaActiva}>
                       <View style={styles.activaTextos}>
-                        <Text style={styles.etiqueta}>Activa</Text>
-                        <Text style={styles.capacidadSubtitulo}>
-                          Si la apagas, el cliente no podrÃ¡ reservarla desde la app
+                        <Text style={styles.campoLabel}>Estado</Text>
+                        <Text style={styles.capacidadAyuda}>
+                          {formActiva ? 'La mesa acepta reservas' : 'No acepta reservas'}
                         </Text>
                       </View>
-                      <View style={styles.activaControles}>
+                      <View style={styles.activaBotones}>
                         <Pressable
-                          style={[styles.activoPill, formActiva && styles.activoPillActivo]}
+                          style={[styles.estadoPillMesa, styles.estadoPillActivo]}
                           onPress={() => !guardandoMesa && setFormActiva(true)}
                         >
-                          <Text style={[styles.activoPillTexto, formActiva && styles.activoPillTextoActivo]}>Activa</Text>
+                          <Text style={[styles.estadoPillMesaTexto, formActiva && styles.estadoPillMesaTextoActivo]}>
+                            Activa
+                          </Text>
                         </Pressable>
                         <Pressable
-                          style={[styles.activoPill, !formActiva && styles.inactivoPillActivo]}
+                          style={[styles.estadoPillMesa, styles.estadoPillInactivo]}
                           onPress={() => !guardandoMesa && setFormActiva(false)}
                         >
-                          <Text style={[styles.activoPillTexto, !formActiva && styles.inactivoPillTextoActivo]}>Inactiva</Text>
+                          <Text style={[styles.estadoPillMesaTexto, !formActiva && styles.estadoPillMesaTextoActivo]}>
+                            Inactiva
+                          </Text>
                         </Pressable>
                       </View>
                     </View>
 
                     <View style={styles.botonesFormulario}>
-                      {editandoId && (
-                        <Pressable
-                          style={[styles.botonSecundario, guardandoMesa && styles.botonDeshabilitado]}
-                          onPress={() => !guardandoMesa && resetFormMesa()}
-                        >
-                          <Text style={styles.textoBotonSecundario}>Cancelar</Text>
+                      {editandoMesaId && (
+                        <Pressable style={styles.botonSecundario} onPress={resetFormMesa}>
+                          <Text style={styles.botonSecundarioTexto}>Cancelar</Text>
                         </Pressable>
                       )}
                       <Pressable
@@ -1103,25 +1157,26 @@ export default function Admin() {
                         disabled={guardandoMesa}
                       >
                         {guardandoMesa ? (
-                          <ActivityIndicator color="#FFFFFF" />
+                          <ActivityIndicator color="#1A1A1A" />
                         ) : (
-                          <Text style={styles.textoBotonGuardar}>
-                            {editandoId ? 'Guardar cambios' : 'Crear mesa'}
-                          </Text>
+                          <View style={styles.botonGuardarContenido}>
+                            <Ionicons name="checkmark-circle-outline" size={20} color="#1A1A1A" />
+                            <Text style={styles.botonGuardarTexto}>
+                              {editandoMesaId ? 'Guardar cambios' : 'Crear mesa'}
+                            </Text>
+                          </View>
                         )}
                       </Pressable>
                     </View>
                   </View>
 
-                  {/* Encabezado de la lista */}
-                  <Text style={styles.listaTitulo}>Mesas existentes</Text>
+                  <Text style={styles.seccionLabel}>Mesas existentes</Text>
 
-                  {cargandoMesas && (
-                    <ActivityIndicator size="large" color="#F28C28" style={styles.cargando} />
-                  )}
+                  {cargandoMesas && <ActivityIndicator size="large" color={COLORES.ambar} style={styles.cargando} />}
 
                   {errorMesas && (
                     <View style={styles.mensajeCard}>
+                      <Ionicons name="cloud-offline-outline" size={28} color={COLORES.rojo} />
                       <Text style={styles.mensajeTexto}>{errorMesas}</Text>
                       <Pressable style={styles.botonClaro} onPress={() => setIntentoMesas((i) => i + 1)}>
                         <Text style={styles.textoBotonClaro}>Reintentar</Text>
@@ -1130,10 +1185,9 @@ export default function Admin() {
                   )}
 
                   {!cargandoMesas && mesas.length === 0 && !errorMesas && (
-                    <View style={styles.vacioMesa}>
-                      <Text style={styles.vacioEmoji}>ðŸª‘</Text>
-                      <Text style={styles.vacioTexto}>AÃºn no hay mesas</Text>
-                      <Text style={styles.vacioSub}>Crea la primera mesa con el formulario de arriba.</Text>
+                    <View style={styles.vacioCaja}>
+                      <Ionicons name="grid-outline" size={52} color={COLORES.textoSuave} />
+                      <Text style={styles.vacioTexto}>No hay mesas registradas</Text>
                     </View>
                   )}
 
@@ -1141,44 +1195,36 @@ export default function Admin() {
                     !errorMesas &&
                     mesas.map((mesa) => (
                       <View key={mesa.id} style={styles.mesaFila}>
-                        <View style={styles.mesaIzq}>
-                          <View style={[styles.mesaCirculo, { backgroundColor: mesa.activa ? '#F28C28' : '#4A4A4A' }]}>
-                            <Text style={styles.mesaCirculoTexto}>
-                              {(mesa.nombre?.replace(/\D/g, '') || mesa.nombre.slice(0, 1)).slice(0, 2)}
+                        <View style={styles.mesaInfo}>
+                          <View style={[styles.mesaIcono, { backgroundColor: mesa.activa ? COLORES.ambar : '#3A4452' }]}>
+                            <Text style={styles.mesaIconoTexto}>
+                              {String(mesa.nombre).replace(/\D/g, '') || '·'}
                             </Text>
                           </View>
                           <View style={styles.mesaTextos}>
-                            <Text style={styles.mesaNombre} numberOfLines={2}>
+                            <Text style={styles.mesaNombre} numberOfLines={1}>
                               {mesa.nombre}
                             </Text>
                             <Text style={styles.mesaDetalle}>
-                              {NOMBRE_ZONA[mesa.zona] ?? mesa.zona} Â· {mesa.capacidad} pers.
+                              {NOMBRE_ZONA[mesa.zona] ?? mesa.zona} · {mesa.capacidad} pers.
                             </Text>
                           </View>
                         </View>
 
                         <View style={styles.mesaAcciones}>
                           <Pressable
-                            style={[styles.toggleActiva, mesa.activa ? styles.toggleApagada : styles.toggleEncendida]}
+                            style={[styles.toggleActivo, mesa.activa ? styles.toggleOk : styles.toggleOff]}
                             onPress={() => alternarActivaMesa(mesa)}
                           >
-                            <Text style={[styles.toggleActivaTexto, !mesa.activa && styles.toggleActivaTextoEncendido]}>
+                            <Text style={[styles.toggleActivoTexto, mesa.activa ? styles.toggleActivoTextoOk : styles.toggleActivoTextoOff]}>
                               {mesa.activa ? 'Activa' : 'Inactiva'}
                             </Text>
                           </Pressable>
-
-                          <Pressable
-                            style={styles.botonEditar}
-                            onPress={() => iniciarEdicion(mesa)}
-                          >
-                            <Text style={styles.botonEditarTexto}>Editar</Text>
+                          <Pressable style={styles.iconoBoton} onPress={() => iniciarEdicionMesa(mesa)}>
+                            <Ionicons name="pencil-outline" size={18} color={COLORES.ambar} />
                           </Pressable>
-
-                          <Pressable
-                            style={styles.botonEliminar}
-                            onPress={() => eliminarMesa(mesa)}
-                          >
-                            <Text style={styles.botonEliminarTexto}>Borrar</Text>
+                          <Pressable style={styles.iconoBotonRojo} onPress={() => eliminarMesa(mesa)}>
+                            <Ionicons name="trash-outline" size={18} color={COLORES.rojo} />
                           </Pressable>
                         </View>
                       </View>
@@ -1186,43 +1232,40 @@ export default function Admin() {
                 </>
               )}
 
-              {/* ============ SECCIÃ“N: HORARIOS (solo admin) ============ */}
+              {/* ========== HORARIOS (admin) ========== */}
               {rol === 'admin' && seccion === 'horarios' && (
                 <>
-                  <Text style={styles.titulo}>Horarios</Text>
-                  <Text style={styles.subtitulo}>
-                    Configura los horarios por dÃ­a. Los cambios afectan quÃ© franjas ven los clientes al reservar.
-                  </Text>
+                  <View style={styles.encabezadoSeccion}>
+                    <View>
+                      <Text style={styles.kicker}>Administración</Text>
+                      <Text style={styles.tituloSeccion}>Horarios</Text>
+                      <Text style={styles.metaTexto}>Los cambios afectan las franjas que ven los clientes</Text>
+                    </View>
+                  </View>
 
-                  {/* SelecciÃ³n de dÃ­a */}
-                  <Text style={styles.etiqueta}>DÃ­a</Text>
-                  <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={styles.filaNumero}
-                  >
-                    {DIAS_SEMANA_COMPLETOS.map((d) => {
+                  <Text style={styles.campoLabel}>Día de la semana</Text>
+                  <View style={styles.diasSemanaFila}>
+                    {DIAS_SEMANA.map((d) => {
                       const elegido = diaEditar === d.clave;
                       return (
                         <Pressable
                           key={d.clave}
-                          style={[styles.diaBtn, elegido && styles.diaBtnActivo]}
+                          style={[styles.diaSemanaBtn, elegido && styles.diaSemanaBtnActivo]}
                           onPress={() => !guardandoHorario && setDiaEditar(d.clave)}
                         >
-                          <Text style={[styles.diaBtnTexto, elegido && styles.diaBtnTextoActivo]}>
+                          <Text style={[styles.diaSemanaTexto, elegido && styles.diaSemanaTextoActivo]}>
                             {d.etiqueta}
                           </Text>
                         </Pressable>
                       );
                     })}
-                  </ScrollView>
+                  </View>
 
-                  {cargandoHorarios && (
-                    <ActivityIndicator size="large" color="#F28C28" style={styles.cargando} />
-                  )}
+                  {cargandoHorarios && <ActivityIndicator size="large" color={COLORES.ambar} style={styles.cargando} />}
 
                   {errorHorarios && (
                     <View style={styles.mensajeCard}>
+                      <Ionicons name="cloud-offline-outline" size={28} color={COLORES.rojo} />
                       <Text style={styles.mensajeTexto}>{errorHorarios}</Text>
                       <Pressable style={styles.botonClaro} onPress={() => setIntentoHorarios((i) => i + 1)}>
                         <Text style={styles.textoBotonClaro}>Reintentar</Text>
@@ -1232,103 +1275,103 @@ export default function Admin() {
 
                   {!cargandoHorarios && (
                     <>
-                      {/* Jornada almuerzo */}
+                      {/* Jornada Almuerzo */}
                       <View style={styles.horarioCard}>
                         <View style={styles.horarioEncabezado}>
-                          <Text style={styles.horarioEmoji}>ðŸ½ï¸</Text>
+                          <Ionicons name="sunny-outline" size={22} color={COLORES.ambar} />
                           <Text style={styles.horarioTitulo}>Almuerzo</Text>
-                          <Pressable
-                            style={[styles.chipToggle, mAlmuerzoAct && styles.chipToggleOn]}
-                            onPress={() => !guardandoHorario && setMAlmuerzoAct(!mAlmuerzoAct)}
-                          >
-                            <Text style={[styles.chipToggleTexto, mAlmuerzoAct && styles.chipToggleTextoOn]}>
-                              {mAlmuerzoAct ? 'Activa' : 'Apagada'}
-                            </Text>
-                          </Pressable>
+                          <Switch
+                            value={almuerzoActivo}
+                            onValueChange={(v) => {
+                              if (!guardandoHorario) setAlmuerzoActivo(v);
+                            }}
+                            trackColor={{ false: '#3A4452', true: COLORES.ambar }}
+                            thumbColor="#F5EFE6"
+                          />
                         </View>
                         <View style={styles.horarioFila}>
                           <View style={styles.horarioCampo}>
                             <Text style={styles.horarioEtiqueta}>Inicio</Text>
                             <TextInput
-                              style={styles.input}
-                              value={mAlmuerzoInicio}
-                              onChangeText={setMAlmuerzoInicio}
+                              style={styles.inputSimple}
+                              value={almuerzoInicio}
+                              onChangeText={setAlmuerzoInicio}
                               placeholder="12:30"
-                              placeholderTextColor="rgba(255,255,255,0.45)"
-                              editable={!guardandoHorario && mAlmuerzoAct}
+                              placeholderTextColor="rgba(255,255,255,0.35)"
+                              editable={!guardandoHorario && almuerzoActivo}
                             />
                           </View>
                           <View style={styles.horarioCampo}>
                             <Text style={styles.horarioEtiqueta}>Fin</Text>
                             <TextInput
-                              style={styles.input}
-                              value={mAlmuerzoFin}
-                              onChangeText={setMAlmuerzoFin}
+                              style={styles.inputSimple}
+                              value={almuerzoFin}
+                              onChangeText={setAlmuerzoFin}
                               placeholder="14:30"
-                              placeholderTextColor="rgba(255,255,255,0.45)"
-                              editable={!guardandoHorario && mAlmuerzoAct}
+                              placeholderTextColor="rgba(255,255,255,0.35)"
+                              editable={!guardandoHorario && almuerzoActivo}
                             />
                           </View>
                           <View style={styles.horarioCampo}>
                             <Text style={styles.horarioEtiqueta}>Dur. (min)</Text>
                             <TextInput
-                              style={styles.input}
-                              value={mAlmuerzoDur}
-                              onChangeText={setMAlmuerzoDur}
+                              style={styles.inputSimple}
+                              value={almuerzoDur}
+                              onChangeText={setAlmuerzoDur}
                               keyboardType="number-pad"
-                              placeholderTextColor="rgba(255,255,255,0.45)"
-                              editable={!guardandoHorario && mAlmuerzoAct}
+                              placeholderTextColor="rgba(255,255,255,0.35)"
+                              editable={!guardandoHorario && almuerzoActivo}
                             />
                           </View>
                         </View>
                       </View>
 
-                      {/* Jornada noche */}
+                      {/* Jornada Noche */}
                       <View style={styles.horarioCard}>
                         <View style={styles.horarioEncabezado}>
-                          <Text style={styles.horarioEmoji}>ðŸŒ™</Text>
+                          <Ionicons name="moon-outline" size={22} color={COLORES.ambar} />
                           <Text style={styles.horarioTitulo}>Noche</Text>
-                          <Pressable
-                            style={[styles.chipToggle, mNocheAct && styles.chipToggleOn]}
-                            onPress={() => !guardandoHorario && setMNocheAct(!mNocheAct)}
-                          >
-                            <Text style={[styles.chipToggleTexto, mNocheAct && styles.chipToggleTextoOn]}>
-                              {mNocheAct ? 'Activa' : 'Apagada'}
-                            </Text>
-                          </Pressable>
+                          <Switch
+                            value={nocheActivo}
+                            onValueChange={(v) => {
+                              if (!guardandoHorario) setNocheActivo(v);
+                            }}
+                            trackColor={{ false: '#3A4452', true: COLORES.ambar }}
+                            thumbColor="#F5EFE6"
+                          />
                         </View>
                         <View style={styles.horarioFila}>
                           <View style={styles.horarioCampo}>
                             <Text style={styles.horarioEtiqueta}>Inicio</Text>
                             <TextInput
-                              style={styles.input}
-                              value={mNocheInicio}
-                              onChangeText={setMNocheInicio}
+                              style={styles.inputSimple}
+                              value={nocheInicio}
+                              onChangeText={setNocheInicio}
                               placeholder="17:00"
-                              placeholderTextColor="rgba(255,255,255,0.45)"
-                              editable={!guardandoHorario && mNocheAct}
+                              placeholderTextColor="rgba(255,255,255,0.35)"
+                              editable={!guardandoHorario && nocheActivo}
                             />
                           </View>
                           <View style={styles.horarioCampo}>
                             <Text style={styles.horarioEtiqueta}>Fin</Text>
                             <TextInput
-                              style={styles.input}
-                              value={mNocheFin}
-                              onChangeText={setMNocheFin}
+                              style={styles.inputSimple}
+                              value={nocheFin}
+                              onChangeText={setNocheFin}
                               placeholder="23:00"
-                              placeholderTextColor="rgba(255,255,255,0.45)"
-                              editable={!guardandoHorario && mNocheAct}
+                              placeholderTextColor="rgba(255,255,255,0.35)"
+                              editable={!guardandoHorario && nocheActivo}
                             />
                           </View>
                           <View style={styles.horarioCampo}>
                             <Text style={styles.horarioEtiqueta}>Dur. (min)</Text>
                             <TextInput
-                              style={styles.input}
-                              value={mNocheDur}
-                              onChangeText={setMNocheDur}
+                              style={styles.inputSimple}
+                              value={nocheDur}
+                              onChangeText={setNocheDur}
                               keyboardType="number-pad"
-                              placeholderTextColor="rgba(255,255,255,0.45)"
-                              editable={!guardandoHorario && mNocheAct}
+                              placeholderTextColor="rgba(255,255,255,0.35)"
+                              editable={!guardandoHorario && nocheActivo}
                             />
                           </View>
                         </View>
@@ -1340,9 +1383,12 @@ export default function Admin() {
                         disabled={guardandoHorario}
                       >
                         {guardandoHorario ? (
-                          <ActivityIndicator color="#FFFFFF" />
+                          <ActivityIndicator color="#1A1A1A" />
                         ) : (
-                          <Text style={styles.textoBotonGuardar}>Guardar horarios de este dÃ­a</Text>
+                          <View style={styles.botonGuardarContenido}>
+                            <Ionicons name="save-outline" size={20} color="#1A1A1A" />
+                            <Text style={styles.botonGuardarTexto}>Guardar horarios del día</Text>
+                          </View>
                         )}
                       </Pressable>
                     </>
@@ -1358,23 +1404,23 @@ export default function Admin() {
 }
 
 const styles = StyleSheet.create({
-  fondo: { flex: 1, backgroundColor: '#0d2b3e' },
+  fondo: { flex: 1, backgroundColor: COLORES.fondo },
   overlay: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.42)',
+    backgroundColor: 'rgba(10,14,22,0.88)',
   },
   container: { flex: 1 },
   scrollContent: {
-    flexGrow: 1,
-    paddingHorizontal: 20,
-    paddingTop: 16,
+    paddingHorizontal: 18,
+    paddingTop: 14,
     paddingBottom: 40,
   },
-  cargando: { marginVertical: 32 },
+
+  /* ========== Barra superior ========== */
   barraSuperior: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -1382,491 +1428,605 @@ const styles = StyleSheet.create({
     marginBottom: 18,
   },
   botonBarra: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: 'rgba(0,0,0,0.45)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.18)',
-  },
-  textoBarra: { color: '#FFFFFF', fontSize: 15, fontWeight: '600' },
-
-  /* ---------- Login ---------- */
-  loginCard: {
-    backgroundColor: 'rgba(18,18,18,0.85)',
-    borderRadius: 22,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.14)',
-    padding: 22,
-    marginTop: 12,
-  },
-  titulo: {
-    fontSize: 30,
-    fontWeight: '800',
-    color: '#FFFFFF',
-    letterSpacing: 0.3,
-    textShadowColor: '#000',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 3,
-  },
-  subtitulo: { fontSize: 15, color: '#D0D0D0', marginTop: 6, marginBottom: 18 },
-  etiqueta: { color: '#FFF', fontSize: 15, fontWeight: '700', marginTop: 14, marginBottom: 8 },
-  input: {
-    height: 54,
-    borderRadius: 16,
-    paddingHorizontal: 16,
-    color: '#FFF',
-    fontSize: 16,
-    backgroundColor: 'rgba(255,255,255,0.09)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.22)',
-  },
-  textoError: {
-    color: '#FF9A94',
-    fontSize: 14,
-    marginTop: 14,
-    textAlign: 'center',
-    backgroundColor: 'rgba(255,80,80,0.12)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,138,128,0.35)',
-    borderRadius: 12,
-    padding: 12,
-    overflow: 'hidden',
-  },
-  botonPrincipal: {
-    backgroundColor: '#F28C28',
-    height: 56,
-    borderRadius: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 22,
-  },
-  botonDeshabilitado: { opacity: 0.55 },
-  textoPrincipal: { color: '#FFF', fontSize: 18, fontWeight: '800' },
-
-  /* ---------- PestaÃ±as admin ---------- */
-  tabsBar: { flexDirection: 'row', gap: 10, marginBottom: 16 },
-  tab: {
-    flex: 1,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(18,18,18,0.75)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.15)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  tabActivo: { backgroundColor: '#F2EFEA', borderColor: '#F28C28', borderWidth: 2 },
-  tabTexto: { color: '#C8C8C8', fontSize: 15, fontWeight: '700' },
-  tabTextoActivo: { color: '#1A1A1A' },
-
-  /* ---------- Reservas: encabezado con contador ---------- */
-  encabezadoReservas: { marginBottom: 6 },
-  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 10 },
-  pillRol: {
-    color: '#1A1A1A',
-    backgroundColor: '#F2EFEA',
-    fontSize: 12,
-    fontWeight: '800',
-    textTransform: 'uppercase',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-    overflow: 'hidden',
-  },
-  metaTexto: { color: '#C8C8C8', fontSize: 14, fontWeight: '600' },
-  fechaTitulo: { color: '#FFFFFF', fontSize: 18, fontWeight: '800', marginBottom: 8 },
-
-  /* ---------- DÃ­as (altura FIJA) ---------- */
-  diasScroll: { height: 78, marginBottom: 16 },
-  filaDias: { alignItems: 'center', gap: 8, paddingRight: 8, paddingVertical: 2 },
-  dia: {
-    width: 60,
-    height: 66,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(18,18,18,0.75)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.18)',
-  },
-  diaElegido: { backgroundColor: '#F2EFEA', borderColor: '#F28C28', borderWidth: 2 },
-  diaNombre: { color: '#C8C8C8', fontSize: 12, fontWeight: '700' },
-  diaNumero: { color: '#FFF', fontSize: 20, fontWeight: '800', marginTop: 2 },
-  textoOscuro: { color: '#1A1A1A' },
-
-  /* ---------- Tarjeta de reserva con acento lateral ---------- */
-  tarjeta: {
-    flexDirection: 'row',
-    borderRadius: 20,
-    marginBottom: 12,
-    backgroundColor: 'rgba(18,18,18,0.85)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
-    overflow: 'hidden',
-  },
-  acentoLateral: { width: 6, height: '100%' },
-  acentoOk: { backgroundColor: '#F28C28' },
-  acentoCancelar: { backgroundColor: '#FF6B6B' },
-  tarjetaContenido: { flex: 1, padding: 16 },
-  tarjetaCancelada: { opacity: 0.6 },
-  tarjetaCabecera: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  hora: { color: '#FFF', fontSize: 20, fontWeight: '800' },
-  estado: {
-    color: '#FFB066',
-    fontSize: 12,
-    fontWeight: '800',
-    backgroundColor: 'rgba(242,140,40,0.18)',
-    borderWidth: 1,
-    borderColor: 'rgba(242,140,40,0.35)',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-    overflow: 'hidden',
-  },
-  estadoCancelada: {
-    color: '#FF9A94',
-    backgroundColor: 'rgba(255,107,107,0.14)',
-    borderColor: 'rgba(255,107,107,0.35)',
-  },
-  cliente: { color: '#FFF', fontSize: 18, fontWeight: '700', marginBottom: 4 },
-  detalle: { color: '#D0D0D0', fontSize: 15, marginTop: 2 },
-  botonCancelar: {
-    marginTop: 14,
-    height: 44,
-    borderRadius: 22,
-    borderWidth: 1.5,
-    borderColor: '#FF8A80',
-    backgroundColor: 'rgba(255,107,107,0.10)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  textoCancelar: { color: '#FF9A94', fontSize: 15, fontWeight: '800' },
-
-  /* ---------- Estado vacÃ­o ---------- */
-  vacioCaja: {
-    alignItems: 'center',
-    paddingVertical: 40,
-    paddingHorizontal: 24,
-    backgroundColor: 'rgba(18,18,18,0.7)',
-    borderRadius: 22,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
-    marginTop: 8,
-  },
-  vacioEmoji: { fontSize: 56, marginBottom: 12 },
-  vacioTexto: { color: '#FFF', fontSize: 19, fontWeight: '800', textAlign: 'center' },
-  vacioSub: {
-    color: '#B0B0B0',
-    fontSize: 14,
-    textAlign: 'center',
-    marginTop: 6,
-  },
-
-  /* ---------- Mensajes ---------- */
-  mensajeCaja: { marginVertical: 16 },
-  mensajeCard: {
-    alignItems: 'center',
-    gap: 14,
-    padding: 18,
-    backgroundColor: 'rgba(18,18,18,0.75)',
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.14)',
-  },
-  mensajeTexto: { color: '#FFF', fontSize: 16, textAlign: 'center' },
-  botonClaro: {
-    backgroundColor: '#F2EFEA',
-    paddingHorizontal: 28,
-    height: 46,
-    borderRadius: 23,
-    justifyContent: 'center',
-  },
-  textoBotonClaro: { color: '#1A1A1A', fontSize: 15, fontWeight: '800' },
-
-  /* ---------- Carta (admin) ---------- */
-  grupo: { marginBottom: 16 },
-  grupoTitulo: {
-    color: '#FFF',
-    fontSize: 17,
-    fontWeight: '800',
-    marginBottom: 8,
-    textShadowColor: '#000',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 2,
-  },
-  platoFila: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(18,18,18,0.8)',
-    borderRadius: 16,
-    padding: 12,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.10)',
-  },
-  platoInfo: { flex: 1, marginRight: 10 },
-  platoNombre: { color: '#FFF', fontSize: 15, fontWeight: '800' },
-  platoPrecio: { color: '#F2EFEA', fontSize: 14, fontWeight: '700', marginTop: 4 },
-  chipDisponible: { borderRadius: 16, paddingHorizontal: 14, paddingVertical: 8, borderWidth: 1.5 },
-  chipOk: { backgroundColor: 'rgba(76,175,80,0.18)', borderColor: '#4CAF50' },
-  chipAgotado: { backgroundColor: 'rgba(255,107,107,0.15)', borderColor: '#FF6B6B' },
-  chipDisponibleTexto: { color: '#7EE2A5', fontWeight: '800', fontSize: 13 },
-  chipAgotadoTexto: { color: '#FF8A80' },
-
-  /* ---------- Mesas (admin) ---------- */
-  mesaForm: {
-    backgroundColor: 'rgba(18,18,18,0.85)',
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.14)',
-    padding: 18,
-    marginBottom: 22,
-  },
-  zonaFila: { flexDirection: 'row', gap: 10, marginBottom: 16 },
-  zonaPill: {
-    flex: 1,
-    height: 46,
-    borderRadius: 23,
+    paddingVertical: 9,
+    borderRadius: 24,
     backgroundColor: 'rgba(255,255,255,0.08)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.18)',
+    borderColor: 'rgba(255,255,255,0.12)',
+    gap: 6,
+  },
+  textoBarra: { color: COLORES.texto, fontSize: 14, fontWeight: '600' },
+
+  /* ========== Login ========== */
+  loginCard: {
+    backgroundColor: COLORES.card,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: COLORES.linea,
+    padding: 26,
+    marginTop: 10,
+    alignItems: 'center',
+  },
+  loginEncabezado: {
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  logoKicker: {
+    color: COLORES.ambar,
+    fontSize: 12,
+    fontWeight: '800',
+    letterSpacing: 4,
+    marginTop: 12,
+  },
+  loginTitulo: {
+    color: COLORES.texto,
+    fontSize: 30,
+    fontWeight: '900',
+    marginTop: 4,
+  },
+  loginSubtexto: {
+    color: COLORES.textoSuave,
+    fontSize: 14,
+    marginTop: 8,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  campo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.07)',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+    height: 58,
+    paddingHorizontal: 16,
+    width: '100%',
+    marginBottom: 14,
+  },
+  campoIcono: { marginRight: 12 },
+  input: {
+    flex: 1,
+    color: COLORES.texto,
+    fontSize: 16,
+  },
+  alertaError: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: 'rgba(255,90,90,0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,90,90,0.35)',
+    borderRadius: 14,
+    padding: 12,
+    width: '100%',
+    marginBottom: 8,
+  },
+  alertaErrorTexto: { color: '#FFB4B4', flex: 1, fontSize: 13, lineHeight: 18 },
+  botonPrimario: {
+    backgroundColor: COLORES.ambar,
+    height: 58,
+    borderRadius: 29,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 12,
+    width: '100%',
+  },
+  botonPrimarioContenido: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  botonPrimarioTexto: {
+    color: '#1A1A1A',
+    fontSize: 17,
+    fontWeight: '900',
+    letterSpacing: 0.5,
+  },
+  botonDeshabilitado: { opacity: 0.55 },
+
+  /* ========== Tabs ========== */
+  tabs: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderRadius: 18,
+    padding: 4,
+    marginBottom: 18,
+    gap: 4,
+  },
+  tab: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    height: 46,
+    borderRadius: 15,
+  },
+  tabActivo: {
+    backgroundColor: COLORES.ambar,
+  },
+  tabTexto: {
+    color: COLORES.textoSuave,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  tabTextoActivo: {
+    color: '#1A1A1A',
+  },
+
+  /* ========== Encabezados de sección ========== */
+  encabezadoSeccion: {
+    marginBottom: 14,
+  },
+  kicker: {
+    color: COLORES.ambar,
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 2,
+    textTransform: 'uppercase',
+  },
+  tituloSeccion: {
+    color: COLORES.texto,
+    fontSize: 28,
+    fontWeight: '900',
+    marginTop: 2,
+  },
+  metaTexto: {
+    color: COLORES.textoSuave,
+    fontSize: 13,
+    marginTop: 4,
+  },
+  metaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginTop: 10,
+  },
+  pillRol: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: COLORES.ambar,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 10,
+  },
+  pillRolTexto: { color: '#1A1A1A', fontSize: 11, fontWeight: '900', textTransform: 'uppercase' },
+
+  /* ========== Reservas: días ========== */
+  fechaTexto: {
+    color: COLORES.texto,
+    fontSize: 18,
+    fontWeight: '800',
+    marginBottom: 12,
+  },
+  diasScroll: { marginBottom: 14 },
+  filaDias: { gap: 8, paddingRight: 4 },
+  dia: {
+    width: 58,
+    height: 64,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.10)',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  zonaPillActiva: {
-    backgroundColor: '#F28C28',
+  diaElegido: {
+    backgroundColor: COLORES.ambar,
     borderColor: '#FFFFFF',
     borderWidth: 2,
   },
-  zonaPillTexto: { color: '#C8C8C8', fontWeight: '700', fontSize: 15 },
-  zonaPillTextoActiva: { color: '#FFFFFF' },
-  capacidadFila: {
+  diaNombre: { color: COLORES.textoSuave, fontSize: 11, fontWeight: '700' },
+  diaNumero: { color: COLORES.texto, fontSize: 19, fontWeight: '900', marginTop: 2 },
+  textoOscuro: { color: '#1A1A1A' },
+
+  /* ========== Tarjeta de reserva ========== */
+  tarjetaReserva: {
+    flexDirection: 'row',
+    backgroundColor: COLORES.card,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: COLORES.linea,
+    overflow: 'hidden',
+    marginBottom: 12,
+  },
+  tarjetaCancelada: { opacity: 0.55 },
+  acentoLateral: { width: 5 },
+  acentoOk: { backgroundColor: COLORES.ambar },
+  acentoCancelar: { backgroundColor: COLORES.rojo },
+  tarjetaContenido: { flex: 1, padding: 14 },
+  tarjetaCabecera: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 12,
-    marginBottom: 16,
+    marginBottom: 10,
   },
-  capacidadTextos: { flex: 1 },
-  capacidadSubtitulo: { color: '#B5B5B5', fontSize: 12, marginTop: 2 },
-  capacidadControles: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  botonContador: {
-    width: 40,
+  horaBloque: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  hora: { color: COLORES.texto, fontSize: 17, fontWeight: '800' },
+  estadoPill: {
+    backgroundColor: 'rgba(242,160,63,0.18)',
+    borderWidth: 1,
+    borderColor: 'rgba(242,160,63,0.45)',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 10,
+  },
+  estadoPillTexto: { color: COLORES.ambar, fontSize: 10, fontWeight: '900', letterSpacing: 0.5 },
+  estadoCancelada: {
+    backgroundColor: 'rgba(255,90,90,0.14)',
+    borderColor: 'rgba(255,90,90,0.4)',
+  },
+  estadoCanceladaTexto: { color: '#FF8A8A' },
+  cliente: { color: COLORES.texto, fontSize: 18, fontWeight: '800', marginBottom: 8 },
+  detalleFila: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
+  detalle: { color: COLORES.textoSuave, fontSize: 14 },
+  botonCancelar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    alignSelf: 'flex-start',
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,90,90,0.45)',
+    backgroundColor: 'rgba(255,90,90,0.08)',
+    paddingHorizontal: 14,
+    marginTop: 10,
+  },
+  textoCancelar: { color: '#FF8A8A', fontSize: 13, fontWeight: '800' },
+
+  /* ========== Estado vacío / errores ========== */
+  vacioCaja: {
+    alignItems: 'center',
+    backgroundColor: COLORES.card,
+    borderRadius: 22,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.22)',
+    borderColor: COLORES.linea,
+    paddingVertical: 40,
+    paddingHorizontal: 20,
+  },
+  vacioTexto: { color: COLORES.texto, fontSize: 17, fontWeight: '800', marginTop: 14, textAlign: 'center' },
+  vacioSub: { color: COLORES.textoSuave, fontSize: 13, textAlign: 'center', marginTop: 6 },
+  mensajeCard: {
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: COLORES.card,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: COLORES.linea,
+    padding: 22,
+  },
+  mensajeTexto: { color: COLORES.texto, fontSize: 15, textAlign: 'center' },
+  botonClaro: {
+    backgroundColor: COLORES.crema,
+    paddingHorizontal: 24,
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  contadorTexto: { color: '#FFFFFF', fontSize: 22, fontWeight: '800' },
-  numeroCapacidad: { color: '#FFFFFF', fontSize: 22, fontWeight: '800', minWidth: 28, textAlign: 'center' },
-  activaFila: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
+  textoBotonClaro: { color: '#1A1A1A', fontSize: 14, fontWeight: '800' },
+
+  /* ========== Formularios ========== */
+  formCard: {
+    backgroundColor: COLORES.card,
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: COLORES.linea,
+    padding: 18,
     marginBottom: 16,
   },
-  activaTextos: { flex: 1 },
-  activaControles: { flexDirection: 'row', gap: 6 },
-  activoPill: {
-    paddingHorizontal: 14,
-    height: 38,
-    borderRadius: 19,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.22)',
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    justifyContent: 'center',
-  },
-  activoPillActivo: { backgroundColor: '#4CAF50', borderColor: '#7EE2A5' },
-  activoPillTexto: { color: '#C8C8C8', fontWeight: '800', fontSize: 13 },
-  activoPillTextoActivo: { color: '#FFFFFF' },
-  inactivoPillActivo: { backgroundColor: 'rgba(255,107,107,0.2)', borderColor: '#FF6B6B' },
-  inactivoPillTextoActivo: { color: '#FFB0A8' },
-  botonesFormulario: { flexDirection: 'row', gap: 10 },
-  botonSecundario: {
-    flex: 1,
-    height: 50,
-    borderRadius: 25,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.12)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.22)',
-  },
-  textoBotonSecundario: { color: '#FFFFFF', fontWeight: '800', fontSize: 15 },
-  botonGuardar: {
-    flex: 2,
-    height: 50,
-    borderRadius: 25,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#F28C28',
-  },
-  textoBotonGuardar: { color: '#FFFFFF', fontWeight: '800', fontSize: 16 },
-  listaTitulo: { color: '#FFFFFF', fontSize: 20, fontWeight: '800', marginBottom: 12 },
-  mesaFila: {
+  formEncabezado: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: 'rgba(18,18,18,0.85)',
-    borderRadius: 18,
-    padding: 14,
-    marginBottom: 10,
+    gap: 10,
+    marginBottom: 14,
+  },
+  formTitulo: { color: COLORES.texto, fontSize: 17, fontWeight: '800' },
+  campoLabel: {
+    color: COLORES.textoSuave,
+    fontSize: 12,
+    fontWeight: '800',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+    marginBottom: 8,
+    marginTop: 4,
+  },
+  inputSimple: {
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.10)',
+    borderRadius: 14,
+    height: 50,
+    paddingHorizontal: 14,
+    color: COLORES.texto,
+    fontSize: 15,
+  },
+
+  /* ========== Categoría chips (2 col) ========== */
+  categoriaGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 14,
+  },
+  categoriaPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.10)',
+  },
+  categoriaPillActiva: {
+    backgroundColor: COLORES.ambar,
+    borderColor: '#FFFFFF',
+  },
+  categoriaPillTexto: { color: COLORES.texto, fontSize: 12, fontWeight: '700' },
+  categoriaPillTextoActiva: { color: '#1A1A1A' },
+
+  /* ========== Fila precio + recomendado ========== */
+  filaPrecioRecomendado: {
+    flexDirection: 'row',
+    gap: 16,
+    alignItems: 'flex-end',
+    marginBottom: 4,
+  },
+  campoPrecio: { flex: 1 },
+  campoSwitch: {
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: 6,
+  },
+
+  /* ========== Botones formulario ========== */
+  botonesFormulario: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 16,
+  },
+  botonSecundario: {
+    flex: 1,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: 'rgba(255,255,255,0.07)',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.14)',
-    gap: 10,
-  },
-  mesaIzq: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
-  mesaCirculo: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: 'rgba(255,255,255,0.4)',
   },
-  mesaCirculoTexto: { color: '#FFFFFF', fontWeight: '900', fontSize: 24 },
-  mesaTextos: { flex: 1 },
-  mesaNombre: { color: '#FFFFFF', fontSize: 16, fontWeight: '800' },
-  mesaDetalle: { color: '#C8C8C8', fontSize: 13, marginTop: 4 },
-  mesaAcciones: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  toggleActiva: {
+  botonSecundarioTexto: { color: COLORES.texto, fontSize: 15, fontWeight: '700' },
+  botonGuardar: {
+    flex: 2,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: COLORES.ambar,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  botonGuardarContenido: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  botonGuardarTexto: { color: '#1A1A1A', fontSize: 15, fontWeight: '900' },
+
+  /* ========== Lista de grupos carta ========== */
+  grupo: { marginBottom: 18 },
+  grupoEncabezado: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 10,
+  },
+  grupoTitulo: { color: COLORES.texto, fontSize: 17, fontWeight: '800' },
+  grupoContador: {
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  grupoContadorTexto: { color: COLORES.textoSuave, fontSize: 11, fontWeight: '800' },
+
+  platoFila: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORES.card,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: COLORES.linea,
+    padding: 10,
+    marginBottom: 8,
+  },
+  platoImagen: {
+    width: 64,
+    height: 64,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
+    overflow: 'hidden',
+  },
+  platoImagenFuente: { width: 64, height: 64 },
+  platoInfo: { flex: 1, marginRight: 8 },
+  platoNombre: { color: COLORES.texto, fontSize: 14, fontWeight: '800' },
+  platoPrecio: { color: COLORES.crema, fontSize: 14, fontWeight: '700', marginTop: 2 },
+  chipDisponibilidad: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
     paddingHorizontal: 10,
     height: 34,
     borderRadius: 17,
     borderWidth: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
-  toggleEncendida: { backgroundColor: 'rgba(76,175,80,0.18)', borderColor: '#4CAF50' },
-  toggleApagada: { backgroundColor: 'rgba(255,107,107,0.15)', borderColor: '#FF6B6B' },
-  toggleActivaTexto: { color: '#FFB0A8', fontWeight: '800', fontSize: 12 },
-  toggleActivaTextoEncendido: { color: '#7EE2A5' },
-  botonEditar: {
-    paddingHorizontal: 12,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: 'rgba(242,140,40,0.25)',
-    borderWidth: 1,
-    borderColor: '#F28C28',
-    justifyContent: 'center',
-  },
-  botonEditarTexto: { color: '#FFFFFF', fontWeight: '800', fontSize: 12 },
-  botonEliminar: {
-    paddingHorizontal: 12,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: 'rgba(255,107,107,0.18)',
-    borderWidth: 1,
-    borderColor: '#FF6B6B',
-    justifyContent: 'center',
-  },
-  botonEliminarTexto: { color: '#FF9A94', fontWeight: '800', fontSize: 12 },
-  vacioMesa: {
-    alignItems: 'center',
-    paddingVertical: 40,
-    backgroundColor: 'rgba(18,18,18,0.7)',
-    borderRadius: 22,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
-  },
-
-  /* ---------- Grupo de chips (categorÃ­as, etc.) ---------- */
-  chipsFila: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 },
-  chip: {
-    paddingHorizontal: 12,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: 'rgba(255,255,255,0.09)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
-    justifyContent: 'center',
-  },
-  chipActivo: { backgroundColor: '#F28C28', borderColor: '#FFFFFF', borderWidth: 2 },
-  chipTexto: { color: '#C8C8C8', fontWeight: '700', fontSize: 13 },
-  chipTextoActivo: { color: '#FFFFFF' },
-  inputPrecio: { flex: 1, maxWidth: 180 },
-
-  /* ---------- Switch recomendado ---------- */
-  switchRecomendado: {
-    minWidth: 64,
-    height: 38,
-    borderRadius: 19,
-    paddingHorizontal: 18,
-    backgroundColor: 'rgba(255,255,255,0.09)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  switchRecomendadoActivo: { backgroundColor: '#F2B928', borderColor: '#FFFFFF' },
-  switchRecomendadoTexto: { color: '#C8C8C8', fontWeight: '800', fontSize: 15 },
-  switchRecomendadoTextoActivo: { color: '#1A1A1A' },
-
-  /* ---------- Acciones de plato (editar / borrar) ---------- */
-  platoAcciones: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  botonIcono: {
+  chipOk: { backgroundColor: 'rgba(62,213,152,0.15)', borderColor: 'rgba(62,213,152,0.5)' },
+  chipAgotado: { backgroundColor: 'rgba(255,90,90,0.12)', borderColor: 'rgba(255,90,90,0.5)' },
+  chipTexto: { fontSize: 11, fontWeight: '800' },
+  chipTextoOk: { color: COLORES.verde },
+  chipTextoAgotado: { color: '#FF8A8A' },
+  iconoBoton: {
     width: 36,
     height: 36,
+    borderRadius: 11,
+    backgroundColor: 'rgba(255,255,255,0.07)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 6,
+  },
+  iconoBotonRojo: {
+    width: 36,
+    height: 36,
+    borderRadius: 11,
+    backgroundColor: 'rgba(255,90,90,0.10)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,90,90,0.35)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 6,
+  },
+
+  /* ========== Mesas ========== */
+  zonaFila: { flexDirection: 'row', gap: 10, marginBottom: 6 },
+  zonaPill: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.10)',
+  },
+  zonaPillActiva: { backgroundColor: COLORES.ambar, borderColor: '#FFFFFF', borderWidth: 2 },
+  zonaPillTexto: { color: COLORES.texto, fontSize: 14, fontWeight: '700' },
+  zonaPillTextoActiva: { color: '#1A1A1A' },
+  filaCapacidad: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 14,
+  },
+  capacidadTextos: { flex: 1 },
+  capacidadAyuda: { color: COLORES.textoSuave, fontSize: 11, marginTop: 2 },
+  capacidadControles: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  stepButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  capacidadNumero: { color: COLORES.texto, fontSize: 22, fontWeight: '900', minWidth: 28, textAlign: 'center' },
+  filaActiva: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 14,
+  },
+  activaTextos: { flex: 1, marginRight: 10 },
+  activaBotones: { flexDirection: 'row', gap: 8 },
+  estadoPillMesa: {
+    paddingHorizontal: 14,
+    height: 38,
+    borderRadius: 19,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  estadoPillActivo: { backgroundColor: 'rgba(62,213,152,0.15)', borderColor: 'rgba(62,213,152,0.5)' },
+  estadoPillInactivo: { backgroundColor: 'rgba(255,90,90,0.12)', borderColor: 'rgba(255,90,90,0.4)' },
+  estadoPillMesaTexto: { color: '#8BE3B2', fontSize: 12, fontWeight: '800' },
+  estadoPillMesaTextoActivo: { color: '#FFFFFF' },
+
+  seccionLabel: {
+    color: COLORES.texto,
+    fontSize: 17,
+    fontWeight: '800',
+    marginTop: 4,
+    marginBottom: 12,
+  },
+
+  mesaFila: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORES.card,
     borderRadius: 18,
-    backgroundColor: 'rgba(255,255,255,0.09)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.22)',
+    borderColor: COLORES.linea,
+    padding: 12,
+    marginBottom: 10,
+  },
+  mesaInfo: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
+  mesaIcono: {
+    width: 56,
+    height: 56,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  botonIconoTexto: { fontSize: 16 },
-
-  /* ---------- Horarios ---------- */
-  filaNumero: { flexDirection: 'row', gap: 8, paddingBottom: 14, alignItems: 'center' },
-  diaBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(18,18,18,0.78)',
+  mesaIconoTexto: { color: '#1A1A1A', fontWeight: '900', fontSize: 20 },
+  mesaTextos: { flex: 1 },
+  mesaNombre: { color: COLORES.texto, fontSize: 15, fontWeight: '800' },
+  mesaDetalle: { color: COLORES.textoSuave, fontSize: 12, marginTop: 2 },
+  mesaAcciones: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  toggleActivo: {
+    height: 34,
+    paddingHorizontal: 10,
+    borderRadius: 17,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.18)',
-    alignItems: 'center',
     justifyContent: 'center',
   },
-  diaBtnActivo: { backgroundColor: '#F28C28', borderColor: '#FFFFFF', borderWidth: 2 },
-  diaBtnTexto: { color: '#C8C8C8', fontWeight: '800', fontSize: 15 },
-  diaBtnTextoActivo: { color: '#FFFFFF' },
+  toggleOk: { backgroundColor: 'rgba(62,213,152,0.15)', borderColor: 'rgba(62,213,152,0.5)' },
+  toggleOff: { backgroundColor: 'rgba(255,90,90,0.12)', borderColor: 'rgba(255,90,90,0.4)' },
+  toggleActivoTexto: { fontSize: 11, fontWeight: '800' },
+  toggleActivoTextoOk: { color: '#8BE3B2' },
+  toggleActivoTextoOff: { color: '#FF8A8A' },
 
-  horarioCard: {
-    backgroundColor: 'rgba(18,18,18,0.85)',
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.14)',
-    padding: 16,
+  /* ========== Horarios ========== */
+  diasSemanaFila: {
+    flexDirection: 'row',
+    gap: 6,
     marginBottom: 16,
   },
-  horarioEncabezado: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 },
-  horarioEmoji: { fontSize: 22 },
-  horarioTitulo: { flex: 1, color: '#FFFFFF', fontSize: 18, fontWeight: '800' },
-  chipToggle: {
-    paddingHorizontal: 14,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+  diaSemanaBtn: {
+    flex: 1,
+    height: 46,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255,255,255,0.06)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
+    borderColor: 'rgba(255,255,255,0.10)',
+    alignItems: 'center',
     justifyContent: 'center',
   },
-  chipToggleOn: { backgroundColor: '#4CAF50', borderColor: '#7EE2A5' },
-  chipToggleTexto: { color: '#FFB0A8', fontWeight: '800', fontSize: 12 },
-  chipToggleTextoOn: { color: '#FFFFFF' },
+  diaSemanaBtnActivo: { backgroundColor: COLORES.ambar, borderColor: '#FFFFFF', borderWidth: 2 },
+  diaSemanaTexto: { color: COLORES.textoSuave, fontSize: 12, fontWeight: '800' },
+  diaSemanaTextoActivo: { color: '#1A1A1A' },
+  horarioCard: {
+    backgroundColor: COLORES.card,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: COLORES.linea,
+    padding: 16,
+    marginBottom: 12,
+  },
+  horarioEncabezado: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 },
+  horarioTitulo: { flex: 1, color: COLORES.texto, fontSize: 16, fontWeight: '800' },
   horarioFila: { flexDirection: 'row', gap: 8 },
   horarioCampo: { flex: 1 },
-  horarioEtiqueta: { color: '#C8C8C8', fontSize: 12, fontWeight: '700', marginBottom: 6 },
+  horarioEtiqueta: { color: COLORES.textoSuave, fontSize: 11, fontWeight: '800', letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 6 },
+
+  /* ========== Utilidades ========== */
+  cargando: { marginVertical: 30 },
 });
