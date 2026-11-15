@@ -1,43 +1,15 @@
 import { supabase } from './supabase';
 
-export interface Reserva {
-    id: string;
-    mesa_id: string;
-    cliente_nombre: string;
-    cliente_contacto?: string;
-    num_personas: number;
-    fecha: string;
-    hora_inicio: string;
-    hora_fin: string;
-    estado: string;
-    creado_en: string;
+export async function obtenerHorasOcupadas(mesaId: string, fecha: string) {
+    const { data, error } = await supabase.rpc('horas_ocupadas', {
+        p_mesa_id: mesaId,
+        p_fecha: fecha,
+    });
+
+    return { data, error };
 }
 
-/**
- * Obtiene las reservas confirmadas de una mesa en una fecha específica.
- * Se usa para saber qué horarios ya están ocupados.
- */
-export async function obtenerReservasConfirmadas(mesaId: string, fecha: string) {
-    try {
-        const { data, error } = await supabase
-            .from('reservas')
-            .select('*')
-            .eq('mesa_id', mesaId)
-            .eq('fecha', fecha)
-            .eq('estado', 'confirmada');
-
-        if (error) throw error;
-        return { data: data || [], error: null };
-    } catch (error) {
-        return { data: [], error: error as Error };
-    }
-}
-
-/**
- * Crea una nueva reserva en Supabase.
- * Valida internamente que no haya conflicto de horario (aunque Supabase lo restringiría con RLS/índice único).
- */
-export async function crearReserva(datos: {
+export async function crearReserva(reserva: {
     mesa_id: string;
     cliente_nombre: string;
     cliente_contacto?: string;
@@ -46,27 +18,20 @@ export async function crearReserva(datos: {
     hora_inicio: string;
     hora_fin: string;
 }) {
-    try {
-        const { data, error } = await supabase
-            .from('reservas')
-            .insert([
-                {
-                    mesa_id: datos.mesa_id,
-                    cliente_nombre: datos.cliente_nombre,
-                    cliente_contacto: datos.cliente_contacto || null,
-                    num_personas: datos.num_personas,
-                    fecha: datos.fecha,
-                    hora_inicio: datos.hora_inicio,
-                    hora_fin: datos.hora_fin,
-                    estado: 'confirmada',
-                },
-            ])
-            .select()
-            .single();
+    const { error } = await supabase.from('reservas').insert({
+        mesa_id: reserva.mesa_id,
+        cliente_nombre: reserva.cliente_nombre,
+        cliente_contacto: reserva.cliente_contacto ?? null,
+        num_personas: reserva.num_personas,
+        fecha: reserva.fecha,
+        hora_inicio: reserva.hora_inicio,
+        hora_fin: reserva.hora_fin,
+        estado: 'confirmada',
+    });
 
-        if (error) throw error;
-        return { data, error: null };
-    } catch (error) {
-        return { data: null, error: error as Error };
-    }
+    return { error };
+}
+
+export function esReservaDuplicada(error: { code?: string } | null) {
+    return error?.code === '23505';
 }

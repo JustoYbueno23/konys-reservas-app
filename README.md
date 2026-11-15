@@ -4,35 +4,37 @@ Aplicación móvil multiplataforma (Android e iOS) para reservar mesas en Konys 
 
 ## Estado del proyecto
 
-**Avance estimado: ~50%**
+**Avance estimado: ~70%**
 
-###  Lo que ya está hecho
+### ✅ Lo que ya está hecho
 - Estructura del proyecto creada con Expo Router.
 - Repositorio en GitHub con múltiples commits.
-- Pantalla de Inicio con diseño visual completo (imagen de fondo, logo KONYS, eslogan, horarios, botón "Reservar mesa", botón de administrador "A").
-- Conexión a Supabase funcionando: lee mesas reales y muestra cuántas hay disponibles.
+- Pantalla de Inicio con diseño visual completo (imagen de fondo, logo KONYS, eslogan, horarios, botón de administrador "A").
+- Conexión a Supabase funcionando: lee mesas reales y platos reales.
 - Navegación entre pantallas: Inicio → Reservar, Inicio → Carta, Inicio → Admin.
-- Pantalla de elección de mesas (`app/reservar/index.tsx`) con burbujas por zona y botón "Continuar" desactivado hasta elegir mesa.
-- Base de datos en Supabase con 4 tablas: `mesas`, `horarios`, `reservas`, `platos`.
+- Flujo completo de reserva: elegir mesa → elegir día y hora (franjas libres/ocupadas/pasadas) → confirmar.
+- Pantalla de confirmación con registro de reserva y detección de doble reserva.
+- Pantalla de elección de mesas (`app/reservar/index.tsx`) con fotos por zona (Terraza / Salón) y botón "Continuar".
+- Carta digital (`app/carta.tsx`) con 15 apartados: recomendados, entradas, pizzas, desgranados, papas, lasaña, granizados, sodas, bebidas, cerveza, cócteles, postres, almuerzos y congelados.
+- Base de datos en Supabase con tablas: `mesas`, `horarios`, `reservas`, `platos` y `perfiles` (roles admin / mesero).
+- Módulo de administrador: acceso protegido por sesión y rol; control de reservas (ver por día, cancelar) y de la carta (marcar Disponible/Agotado).
 - Cliente de Supabase configurado en `services/supabase.ts`.
 - `.env` con credenciales de Supabase configurado localmente (no subido a GitHub).
 - `.gitignore` y `.env.example` incluidos.
 - Mockups de baja fidelidad (bocetos) en carpeta `/docs`.
 - Documento del proyecto en `/docs`.
 
-###  Lo que falta por hacer
-- Pantalla de reserva completa: elegir fecha, ver horarios libres/ocupados, llenar formulario y confirmar.
-- Pantalla de confirmación de reserva.
-- Módulo de administrador: acceso con PIN, gestión de mesas, horarios, reservas y carta.
-- Pantalla de carta digital (cliente).
+### ⏳ Lo que falta por hacer
+- Módulo de administrador completo: gestión de mesas (crear/editar/activar-desactivar), gestión de horarios y gestión completa de platos.
 - Generar APK con EAS Build.
 - Grabar video explicativo (5-8 minutos).
 - Pruebas en celular real y casos de error.
+- Fotos de los 35 productos que faltan (Granizados, Sodas, Bebidas Frías, Cerveza, Cócteles, Postres, Almuerzos y Congelados).
 
 ## Tecnologías
 - React Native
 - Expo (Expo Router)
-- Supabase (base de datos en la nube)
+- Supabase (base de datos en la nube y autenticación)
 - GitHub (control de versiones)
 - AsyncStorage (sesión del administrador)
 
@@ -41,13 +43,17 @@ Aplicación móvil multiplataforma (Android e iOS) para reservar mesas en Konys 
 2. Copia `.env.example` a `.env` y completa las credenciales de Supabase.
 3. Instala las dependencias:
    ```bash
-   npm installGo
+   npm install
+   ```
+4. Inicia el proyecto:
+   ```bash
+   npx expo start
+   ```
+5. Escanea el código QR con la app Expo Go en tu celular.
 
 ## Enlaces
-
 - APK / proyecto en Expo: (pendiente)
 - Video explicativo: (pendiente)
 
 ## Autor
-
 Juan José Medina Orozco
