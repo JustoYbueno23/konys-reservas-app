@@ -1,4 +1,4 @@
-import { useRouter } from 'expo-router';
+﻿import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useMemo, useState } from 'react';
 import {
@@ -22,25 +22,25 @@ export const options = {
 
 const FONDO = require('../assets/images/FondoReservarMesa.png');
 
-const DIAS_CORTOS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+const DIAS_CORTOS = ['Dom', 'Lun', 'Mar', 'MiÃ©', 'Jue', 'Vie', 'SÃ¡b'];
 const MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
-const NOMBRE_ZONA: Record<string, string> = { terraza: 'Terraza', salon: 'Salón' };
+const NOMBRE_ZONA: Record<string, string> = { terraza: 'Terraza', salon: 'SalÃ³n' };
 
 const CATEGORIA_INFO: Record<string, { label: string; emoji: string }> = {
-  entradas: { label: 'Entradas', emoji: '🥟' },
-  'menu-infantil': { label: 'Menú Infantil', emoji: '👶' },
-  pizzas: { label: 'Pizzas', emoji: '🍕' },
-  desgranados: { label: 'Desgranados', emoji: '🥘' },
-  papas: { label: 'Papas Ikónicas', emoji: '🍟' },
-  lasana: { label: 'Lasaña', emoji: '🍝' },
-  granizados: { label: 'Granizados', emoji: '🧊' },
-  sodas: { label: 'Sodas', emoji: '🧃' },
-  bebidas: { label: 'Bebidas Frías', emoji: '🥤' },
-  cerveza: { label: 'Cerveza', emoji: '🍺' },
-  cocteles: { label: 'Cócteles', emoji: '🍹' },
-  postres: { label: 'Postres', emoji: '🍨' },
-  almuerzos: { label: 'Menú Almuerzos', emoji: '🍝' },
-  congelados: { label: 'Congelados', emoji: '❄️' },
+  entradas: { label: 'Entradas', emoji: 'ðŸ¥Ÿ' },
+  'menu-infantil': { label: 'MenÃº Infantil', emoji: 'ðŸ‘¶' },
+  pizzas: { label: 'Pizzas', emoji: 'ðŸ•' },
+  desgranados: { label: 'Desgranados', emoji: 'ðŸ¥˜' },
+  papas: { label: 'Papas IkÃ³nicas', emoji: 'ðŸŸ' },
+  lasana: { label: 'LasaÃ±a', emoji: 'ðŸ' },
+  granizados: { label: 'Granizados', emoji: 'ðŸ§Š' },
+  sodas: { label: 'Sodas', emoji: 'ðŸ§ƒ' },
+  bebidas: { label: 'Bebidas FrÃ­as', emoji: 'ðŸ¥¤' },
+  cerveza: { label: 'Cerveza', emoji: 'ðŸº' },
+  cocteles: { label: 'CÃ³cteles', emoji: 'ðŸ¹' },
+  postres: { label: 'Postres', emoji: 'ðŸ¨' },
+  almuerzos: { label: 'MenÃº Almuerzos', emoji: 'ðŸ' },
+  congelados: { label: 'Congelados', emoji: 'â„ï¸' },
 };
 
 function formatoPrecio(p: number) {
@@ -56,7 +56,7 @@ function formatoFechaLarga(fechaTexto: string) {
 export default function Admin() {
   const router = useRouter();
 
-  // Sesión y rol
+  // SesiÃ³n y rol
   const [revisandoSesion, setRevisandoSesion] = useState(true);
   const [rol, setRol] = useState<string | null>(null);
   const [correo, setCorreo] = useState('');
@@ -64,8 +64,8 @@ export default function Admin() {
   const [errorLogin, setErrorLogin] = useState<string | null>(null);
   const [entrando, setEntrando] = useState(false);
 
-  // Pestaña seleccionada (solo para admin)
-  const [seccion, setSeccion] = useState<'reservas' | 'carta' | 'mesas'>('reservas');
+  // PestaÃ±a seleccionada (solo para admin)
+  const [seccion, setSeccion] = useState<'reservas' | 'carta' | 'mesas' | 'horarios'>('reservas');
 
   // Lista de reservas
   const [fecha, setFecha] = useState(fechaATexto(new Date()));
@@ -74,12 +74,30 @@ export default function Admin() {
   const [errorLista, setErrorLista] = useState<string | null>(null);
   const [intento, setIntento] = useState(0);
 
-  // Sección Carta (solo admin)
+  // SecciÃ³n Carta (solo admin)
   const [platos, setPlatos] = useState<any[]>([]);
   const [cargandoPlatos, setCargandoPlatos] = useState(false);
   const [errorPlatos, setErrorPlatos] = useState<string | null>(null);
 
-  // Sección Mesas (solo admin): listar, crear, editar, activar/desactivar
+  // SecciÃ³n Horarios (solo admin)
+  const [horarios, setHorarios] = useState<any[]>([]);
+  const [cargandoHorarios, setCargandoHorarios] = useState(false);
+  const [errorHorarios, setErrorHorarios] = useState<string | null>(null);
+  const [intentoHorarios, setIntentoHorarios] = useState(0);
+  const [diaEditar, setDiaEditar] = useState<string>(() =>
+    ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'][new Date().getDay()]
+  );
+  const [mAlmuerzoInicio, setMAlmuerzoInicio] = useState('12:30');
+  const [mAlmuerzoFin, setMAlmuerzoFin] = useState('14:30');
+  const [mAlmuerzoDur, setMAlmuerzoDur] = useState('60');
+  const [mAlmuerzoAct, setMAlmuerzoAct] = useState(true);
+  const [mNocheInicio, setMNocheInicio] = useState('17:00');
+  const [mNocheFin, setMNocheFin] = useState('23:00');
+  const [mNocheDur, setMNocheDur] = useState('60');
+  const [mNocheAct, setMNocheAct] = useState(true);
+  const [guardandoHorario, setGuardandoHorario] = useState(false);
+
+  // SecciÃ³n Mesas (solo admin): listar, crear, editar, activar/desactivar
   const [mesas, setMesas] = useState<any[]>([]);
   const [cargandoMesas, setCargandoMesas] = useState(false);
   const [errorMesas, setErrorMesas] = useState<string | null>(null);
@@ -91,6 +109,15 @@ export default function Admin() {
   const [formCapacidad, setFormCapacidad] = useState(4);
   const [formActiva, setFormActiva] = useState(true);
   const [guardandoMesa, setGuardandoMesa] = useState(false);
+
+  // SecciÃ³n Platos: gestiÃ³n completa (crear, editar, eliminar)
+  const [editandoPlatoId, setEditandoPlatoId] = useState<number | null>(null);
+  const [formPlatoNombre, setFormPlatoNombre] = useState('');
+  const [formPlatoCategoria, setFormPlatoCategoria] = useState<string>('pizzas');
+  const [formPlatoPrecio, setFormPlatoPrecio] = useState('');
+  const [formPlatoDescripcion, setFormPlatoDescripcion] = useState('');
+  const [formPlatoRecomendado, setFormPlatoRecomendado] = useState(false);
+  const [guardandoPlato, setGuardandoPlato] = useState(false);
 
   useEffect(() => {
     if (rol === 'mesero') setSeccion('reservas');
@@ -104,7 +131,7 @@ export default function Admin() {
       .maybeSingle();
 
     if (error) {
-      setErrorLogin('No se pudo verificar tu perfil. Revisa tu conexión.');
+      setErrorLogin('No se pudo verificar tu perfil. Revisa tu conexiÃ³n.');
       return;
     }
     if (!data || !data.activo) {
@@ -129,7 +156,7 @@ export default function Admin() {
   async function iniciarSesion() {
     setErrorLogin(null);
     if (!correo.trim() || !clave) {
-      setErrorLogin('Escribe tu correo y tu contraseña.');
+      setErrorLogin('Escribe tu correo y tu contraseÃ±a.');
       return;
     }
     setEntrando(true);
@@ -138,7 +165,7 @@ export default function Admin() {
       password: clave,
     });
     if (error || !data.user) {
-      setErrorLogin('Correo o contraseña incorrectos.');
+      setErrorLogin('Correo o contraseÃ±a incorrectos.');
     } else {
       await verificarRol(data.user.id);
     }
@@ -185,7 +212,7 @@ export default function Admin() {
 
       if (!activo) return;
       if (error) {
-        setErrorLista('No se pudieron cargar las reservas. Revisa tu conexión.');
+        setErrorLista('No se pudieron cargar las reservas. Revisa tu conexiÃ³n.');
       } else {
         setReservas(data ?? []);
       }
@@ -213,7 +240,7 @@ export default function Admin() {
 
       if (!activo) return;
       if (error) {
-        setErrorPlatos('No se pudieron cargar los platos. Revisa tu conexión.');
+        setErrorPlatos('No se pudieron cargar los platos. Revisa tu conexiÃ³n.');
       } else {
         setPlatos(data ?? []);
       }
@@ -226,7 +253,7 @@ export default function Admin() {
     };
   }, [rol, seccion]);
 
-  // Cargar mesas cada vez que el admin abre la sección Mesas (o reintenta)
+  // Cargar mesas cada vez que el admin abre la secciÃ³n Mesas (o reintenta)
   useEffect(() => {
     if (rol !== 'admin' || seccion !== 'mesas') return;
     let activo = true;
@@ -241,7 +268,7 @@ export default function Admin() {
       .then(({ data, error }) => {
         if (!activo) return;
         if (error) {
-          setErrorMesas('No se pudieron cargar las mesas. Revisa tu conexión.');
+          setErrorMesas('No se pudieron cargar las mesas. Revisa tu conexiÃ³n.');
         } else {
           setMesas(data ?? []);
         }
@@ -256,11 +283,11 @@ export default function Admin() {
   function pedirCancelacion(reserva: any) {
     Alert.alert(
       'Cancelar reserva',
-      `¿Cancelar la reserva de ${reserva.cliente_nombre} a las ${reserva.hora_inicio.slice(
+      `Â¿Cancelar la reserva de ${reserva.cliente_nombre} a las ${reserva.hora_inicio.slice(
         0,
         5
       )}?`,
-      [{ text: 'No', style: 'cancel' }, { text: 'Sí, cancelar', style: 'destructive', onPress: () => cancelar(reserva.id) }]
+      [{ text: 'No', style: 'cancel' }, { text: 'SÃ­, cancelar', style: 'destructive', onPress: () => cancelar(reserva.id) }]
     );
   }
 
@@ -272,7 +299,7 @@ export default function Admin() {
       .select();
 
     if (error || !data || data.length === 0) {
-      Alert.alert('No se pudo cancelar', 'Revisa tu conexión o tus permisos.');
+      Alert.alert('No se pudo cancelar', 'Revisa tu conexiÃ³n o tus permisos.');
       return;
     }
     setIntento((i) => i + 1);
@@ -312,7 +339,7 @@ export default function Admin() {
       .select('id, nombre, zona, capacidad, activa')
       .order('nombre', { ascending: true });
     if (error) {
-      setErrorMesas('No se pudieron cargar las mesas. Revisa tu conexión.');
+      setErrorMesas('No se pudieron cargar las mesas. Revisa tu conexiÃ³n.');
     } else {
       setMesas(data ?? []);
     }
@@ -335,7 +362,7 @@ export default function Admin() {
     }
     const capacidadNum = Math.max(1, Math.floor(Number(formCapacidad) || 0));
     if (!capacidadNum) {
-      Alert.alert('Capacidad inválida', 'La capacidad debe ser al menos 1 persona.');
+      Alert.alert('Capacidad invÃ¡lida', 'La capacidad debe ser al menos 1 persona.');
       return;
     }
 
@@ -358,7 +385,7 @@ export default function Admin() {
     setGuardandoMesa(false);
 
     if (error) {
-      Alert.alert('Error', 'No se pudo guardar la mesa. Revisa tu conexión o permisos.');
+      Alert.alert('Error', 'No se pudo guardar la mesa. Revisa tu conexiÃ³n o permisos.');
       return;
     }
     resetFormMesa();
@@ -381,7 +408,7 @@ export default function Admin() {
   async function eliminarMesa(mesa: any) {
     Alert.alert(
       'Eliminar mesa',
-      `¿Eliminar "${mesa.nombre}"? Las reservas se conservarán.`,
+      `Â¿Eliminar "${mesa.nombre}"? Las reservas se conservarÃ¡n.`,
       [
         { text: 'Cancelar', style: 'cancel' },
         {
@@ -390,7 +417,7 @@ export default function Admin() {
           onPress: async () => {
             const { error } = await supabase.from('mesas').delete().eq('id', mesa.id);
             if (error) {
-              Alert.alert('No se pudo eliminar', 'Revisa tu conexión o tus permisos.');
+              Alert.alert('No se pudo eliminar', 'Revisa tu conexiÃ³n o tus permisos.');
               return;
             }
             if (editandoId === mesa.id) resetFormMesa();
@@ -401,6 +428,168 @@ export default function Admin() {
     );
   }
 
+  // ---------- HORARIOS ----------
+  const DIAS_SEMANA_COMPLETOS = [
+    { clave: 'lunes', etiqueta: 'L' },
+    { clave: 'martes', etiqueta: 'M' },
+    { clave: 'miercoles', etiqueta: 'X' },
+    { clave: 'jueves', etiqueta: 'J' },
+    { clave: 'viernes', etiqueta: 'V' },
+    { clave: 'sabado', etiqueta: 'S' },
+    { clave: 'domingo', etiqueta: 'D' },
+  ];
+
+  // Formatea "12:30:00" -> "12:30"
+  function soloHora(t: string) {
+    return t ? t.slice(0, 5) : '';
+  }
+
+  function cargarHorarioAFormulario(h: any) {
+    if (h?.jornada === 'almuerzo') {
+      setMAlmuerzoInicio(soloHora(h.hora_inicio));
+      setMAlmuerzoFin(soloHora(h.hora_fin));
+      setMAlmuerzoDur(String(h.duracion_slot ?? 60));
+      setMAlmuerzoAct(h.activo !== false);
+    } else {
+      setMNocheInicio(soloHora(h.hora_inicio));
+      setMNocheFin(soloHora(h.hora_fin));
+      setMNocheDur(String(h.duracion_slot ?? 60));
+      setMNocheAct(h.activo !== false);
+    }
+  }
+
+  async function guardarHorarios() {
+    setGuardandoHorario(true);
+    const actualizar = async (jornada: string, inicio: string, fin: string, dur: string, act: boolean) => {
+      // Si existe la fila para ese dÃ­a y esa jornada, la actualiza. Si no, la crea.
+      const existentes = horarios.find((h) => h.dia_semana === diaEditar && h.jornada === jornada);
+      const payload = {
+        dia_semana: diaEditar,
+        jornada,
+        hora_inicio: inicio,
+        hora_fin: fin,
+        duracion_slot: Math.max(15, Number(dur) || 60),
+        activo: act,
+      };
+      if (existentes) {
+        return supabase.from('horarios').update(payload).eq('id', existentes.id);
+      }
+      return supabase.from('horarios').insert(payload);
+    };
+    const [res1, res2] = await Promise.all([
+      actualizar('almuerzo', mAlmuerzoInicio, mAlmuerzoFin, mAlmuerzoDur, mAlmuerzoAct),
+      actualizar('noche', mNocheInicio, mNocheFin, mNocheDur, mNocheAct),
+    ]);
+    if (res1.error || res2.error) {
+      Alert.alert('Error', 'No se pudieron guardar los horarios. Revisa tu conexiÃ³n o permisos.');
+    } else {
+      setIntentoHorarios((i) => i + 1);
+    }
+    setGuardandoHorario(false);
+  }
+
+  // ---------- PLATOS: crear, editar, eliminar ----------
+  function iniciarEdicionPlato(plato: any) {
+    setEditandoPlatoId(plato.id);
+    setFormPlatoNombre(plato.nombre);
+    setFormPlatoCategoria(plato.categoria);
+    setFormPlatoPrecio(String(plato.precio));
+    setFormPlatoDescripcion(plato.descripcion ?? '');
+    setFormPlatoRecomendado(!!plato.recomendado);
+  }
+
+  async function guardarPlato() {
+    const nombreLimpio = formPlatoNombre.trim();
+    const precioNumero = Number(formPlatoPrecio);
+    if (!nombreLimpio || Number.isNaN(precioNumero) || precioNumero <= 0) {
+      Alert.alert('Datos invÃ¡lidos', 'Escribe un nombre y un precio mayor a 0.');
+      return;
+    }
+    setGuardandoPlato(true);
+    const payload = {
+      nombre: nombreLimpio,
+      categoria: formPlatoCategoria,
+      precio: precioNumero,
+      descripcion: formPlatoDescripcion.trim() || null,
+      recomendado: formPlatoRecomendado,
+      disponible: true,
+    };
+
+    let error;
+    if (editandoPlatoId != null) {
+      // Al editar, no sobreescribir disponible
+      const { disponible, ...sinDisponible } = payload;
+      const res = await supabase.from('platos').update(sinDisponible).eq('id', editandoPlatoId);
+      error = res.error;
+    } else {
+      const res = await supabase.from('platos').insert(payload);
+      error = res.error;
+    }
+
+    setGuardandoPlato(false);
+    if (error) {
+      Alert.alert('Error', 'No se pudo guardar el plato. Revisa tu conexiÃ³n o permisos.');
+      return;
+    }
+    setEditandoPlatoId(null);
+    setFormPlatoNombre('');
+    setFormPlatoCategoria('pizzas');
+    setFormPlatoPrecio('');
+    setFormPlatoDescripcion('');
+    setFormPlatoRecomendado(false);
+    setIntento((i) => i + 1); // recarga la lista de platos
+  }
+
+  async function eliminarPlato(plato: any) {
+    Alert.alert(
+      'Eliminar plato',
+      `Â¿Eliminar "${plato.nombre}"? Esta acciÃ³n no se puede deshacer.`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Eliminar',
+          style: 'destructive',
+          onPress: async () => {
+            const { error } = await supabase.from('platos').delete().eq('id', plato.id);
+            if (error) {
+              Alert.alert('No se pudo eliminar', 'Revisa tu conexiÃ³n o tus permisos.');
+              return;
+            }
+            setIntento((i) => i + 1);
+          },
+        },
+      ]
+    );
+  }
+
+  // ---------- Horarios: cargar ----------
+  useEffect(() => {
+    if (rol !== 'admin' || seccion !== 'horarios') return;
+    let activo = true;
+    setCargandoHorarios(true);
+    setErrorHorarios(null);
+    supabase
+      .from('horarios')
+      .select('*')
+      .then(({ data, error }) => {
+        if (!activo) return;
+        if (error) {
+          setErrorHorarios('No se pudieron cargar los horarios. Revisa tu conexiÃ³n.');
+        } else {
+          setHorarios(data ?? []);
+          // Cargar almuerzo y noche del dÃ­a seleccionado al formulario
+          const dia = (data ?? []).find((h: any) => h.dia_semana === diaEditar) ?? [];
+          const alu = dia.find((h: any) => h.jornada === 'almuerzo');
+          const noc = dia.find((h: any) => h.jornada === 'noche');
+          if (alu) cargarHorarioAFormulario(alu);
+          if (noc) cargarHorarioAFormulario(noc);
+        }
+        setCargandoHorarios(false);
+      });
+    return () => {
+      activo = false;
+    };
+  }, [rol, seccion, intentoHorarios, diaEditar]);
   const puedeCancelar = rol === 'admin' || rol === 'mesero';
   const dias = proximosDias(14);
   const confirmadas = reservas.filter((r) => r.estado === 'confirmada').length;
@@ -432,22 +621,22 @@ export default function Admin() {
         >
           <View style={styles.barraSuperior}>
             <Pressable style={styles.botonBarra} onPress={volverYCerrarSesion}>
-              <Text style={styles.textoBarra}>‹ Volver</Text>
+              <Text style={styles.textoBarra}>â€¹ Volver</Text>
             </Pressable>
             {rol && (
               <Pressable style={styles.botonBarra} onPress={cerrarSesion}>
-                <Text style={styles.textoBarra}>Cerrar sesión</Text>
+                <Text style={styles.textoBarra}>Cerrar sesiÃ³n</Text>
               </Pressable>
             )}
           </View>
 
           {revisandoSesion && <ActivityIndicator size="large" color="#F28C28" style={styles.cargando} />}
 
-          {/* ---------- INICIO DE SESIÓN ---------- */}
+          {/* ---------- INICIO DE SESIÃ“N ---------- */}
           {!revisandoSesion && !rol && (
             <View style={styles.loginCard}>
               <Text style={styles.titulo}>Acceso del personal</Text>
-              <Text style={styles.subtitulo}>Inicia sesión para ver las reservas</Text>
+              <Text style={styles.subtitulo}>Inicia sesiÃ³n para ver las reservas</Text>
 
               <Text style={styles.etiqueta}>Correo</Text>
               <TextInput
@@ -461,12 +650,12 @@ export default function Admin() {
                 editable={!entrando}
               />
 
-              <Text style={styles.etiqueta}>Contraseña</Text>
+              <Text style={styles.etiqueta}>ContraseÃ±a</Text>
               <TextInput
                 style={styles.input}
                 value={clave}
                 onChangeText={setClave}
-                placeholder="Contraseña"
+                placeholder="ContraseÃ±a"
                 placeholderTextColor="rgba(255,255,255,0.45)"
                 secureTextEntry
                 autoCapitalize="none"
@@ -518,10 +707,18 @@ export default function Admin() {
                       Mesas
                     </Text>
                   </Pressable>
+                  <Pressable
+                    style={[styles.tab, seccion === 'horarios' && styles.tabActivo]}
+                    onPress={() => setSeccion('horarios')}
+                  >
+                    <Text style={[styles.tabTexto, seccion === 'horarios' && styles.tabTextoActivo]}>
+                      Horarios
+                    </Text>
+                  </Pressable>
                 </View>
               )}
 
-              {/* ============ SECCIÓN: RESERVAS ============ */}
+              {/* ============ SECCIÃ“N: RESERVAS ============ */}
               {(rol === 'mesero' || seccion === 'reservas') && (
                 <>
                   <View style={styles.encabezadoReservas}>
@@ -582,10 +779,10 @@ export default function Admin() {
 
                   {!cargandoLista && !errorLista && reservas.length === 0 && (
                     <View style={styles.vacioCaja}>
-                      <Text style={styles.vacioEmoji}>🍽️</Text>
-                      <Text style={styles.vacioTexto}>No hay reservas para este día</Text>
+                      <Text style={styles.vacioEmoji}>ðŸ½ï¸</Text>
+                      <Text style={styles.vacioTexto}>No hay reservas para este dÃ­a</Text>
                       <Text style={styles.vacioSub}>
-                        Cuando alguien reserve desde la app aparecerá aquí.
+                        Cuando alguien reserve desde la app aparecerÃ¡ aquÃ­.
                       </Text>
                     </View>
                   )}
@@ -605,7 +802,7 @@ export default function Admin() {
                           <View style={styles.tarjetaContenido}>
                             <View style={styles.tarjetaCabecera}>
                               <Text style={styles.hora}>
-                                {r.hora_inicio.slice(0, 5)} – {r.hora_fin.slice(0, 5)}
+                                {r.hora_inicio.slice(0, 5)} â€“ {r.hora_fin.slice(0, 5)}
                               </Text>
                               <Text style={[styles.estado, cancelada && styles.estadoCancelada]}>
                                 {cancelada ? 'CANCELADA' : 'CONFIRMADA'}
@@ -614,10 +811,10 @@ export default function Admin() {
 
                             <Text style={styles.cliente}>{r.cliente_nombre}</Text>
                             <Text style={styles.detalle}>
-                              {r.mesas?.nombre ?? 'Mesa'} · {NOMBRE_ZONA[r.mesas?.zona] ?? r.mesas?.zona ?? ''} ·{' '}
+                              {r.mesas?.nombre ?? 'Mesa'} Â· {NOMBRE_ZONA[r.mesas?.zona] ?? r.mesas?.zona ?? ''} Â·{' '}
                               {r.num_personas} {r.num_personas === 1 ? 'persona' : 'personas'}
                             </Text>
-                            <Text style={styles.detalle}>Tel: {r.cliente_contacto ?? '—'}</Text>
+                            <Text style={styles.detalle}>Tel: {r.cliente_contacto ?? 'â€”'}</Text>
 
                             {puedeCancelar && !cancelada && (
                               <Pressable style={styles.botonCancelar} onPress={() => pedirCancelacion(r)}>
@@ -631,13 +828,114 @@ export default function Admin() {
                 </>
               )}
 
-              {/* ============ SECCIÓN: CARTA (solo admin) ============ */}
+              {/* ============ SECCIÃ“N: CARTA (solo admin) ============ */}
               {rol === 'admin' && seccion === 'carta' && (
                 <>
                   <Text style={styles.titulo}>Carta</Text>
                   <Text style={styles.subtitulo}>
-                    Toca Disponible / Agotado para cambiarlo al instante
+                    {editandoPlatoId != null ? 'Editando plato' : 'Agrega un plato nuevo'} o cambia Disponible/Agotado
                   </Text>
+
+                  {/* Formulario crear / editar plato */}
+                  <View style={styles.mesaForm}>
+                    <Text style={styles.etiqueta}>Nombre</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={formPlatoNombre}
+                      onChangeText={setFormPlatoNombre}
+                      placeholder="Ej. Hawaiiana"
+                      placeholderTextColor="rgba(255,255,255,0.45)"
+                      editable={!guardandoPlato}
+                    />
+
+                    <Text style={styles.etiqueta}>CategorÃ­a</Text>
+                    <View style={styles.chipsFila}>
+                      {Object.keys(CATEGORIA_INFO).map((clave) => {
+                        const elegido = formPlatoCategoria === clave;
+                        const info = CATEGORIA_INFO[clave];
+                        return (
+                          <Pressable
+                            key={clave}
+                            style={[styles.chip, elegido && styles.chipToggle]}
+                            onPress={() => !guardandoPlato && setFormPlatoCategoria(clave)}
+                          >
+                            <Text style={[styles.chipTexto, elegido && styles.chipTextoActivo]}>
+                              {info.emoji} {info.label}
+                            </Text>
+                          </Pressable>
+                        );
+                      })}
+                    </View>
+
+                    <View style={styles.capacidadFila}>
+                      <View style={styles.capacidadTextos}>
+                        <Text style={styles.etiqueta}>Precio (COP)</Text>
+                      </View>
+                      <TextInput
+                        style={[styles.input, styles.inputPrecio]}
+                        value={formPlatoPrecio}
+                        onChangeText={setFormPlatoPrecio}
+                        placeholder="27900"
+                        placeholderTextColor="rgba(255,255,255,0.45)"
+                        keyboardType="number-pad"
+                        editable={!guardandoPlato}
+                      />
+                    </View>
+
+                    <Text style={styles.etiqueta}>DescripciÃ³n (opcional)</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={formPlatoDescripcion}
+                      onChangeText={setFormPlatoDescripcion}
+                      placeholder="Ej. JamÃ³n, piÃ±a y queso mozzarella"
+                      placeholderTextColor="rgba(255,255,255,0.45)"
+                      editable={!guardandoPlato}
+                    />
+
+                    <Pressable
+                      style={styles.activaFila}
+                      onPress={() => !guardandoPlato && setFormPlatoRecomendado(!formPlatoRecomendado)}
+                    >
+                      <Text style={styles.etiqueta}>â­ Recomendado</Text>
+                      <View style={[styles.switchRecomendado, formPlatoRecomendado && styles.switchRecomendadoActivo]}>
+                        <Text style={[styles.switchRecomendadoTexto, formPlatoRecomendado && styles.switchRecomendadoTextoActivo]}>
+                          {formPlatoRecomendado ? 'SÃ­' : 'No'}
+                        </Text>
+                      </View>
+                    </Pressable>
+
+                    <View style={styles.botonesFormulario}>
+                      {editandoPlatoId != null && (
+                        <Pressable
+                          style={[styles.botonSecundario, guardandoPlato && styles.botonDeshabilitado]}
+                          onPress={() => {
+                            if (guardandoPlato) return;
+                            setEditandoPlatoId(null);
+                            setFormPlatoNombre('');
+                            setFormPlatoCategoria('pizzas');
+                            setFormPlatoPrecio('');
+                            setFormPlatoDescripcion('');
+                            setFormPlatoRecomendado(false);
+                          }}
+                        >
+                          <Text style={styles.textoBotonSecundario}>Cancelar</Text>
+                        </Pressable>
+                      )}
+                      <Pressable
+                        style={[styles.botonGuardar, guardandoPlato && styles.botonDeshabilitado, editandoPlatoId == null && { flex: 1 }]}
+                        onPress={guardarPlato}
+                        disabled={guardandoPlato}
+                      >
+                        {guardandoPlato ? (
+                          <ActivityIndicator color="#FFFFFF" />
+                        ) : (
+                          <Text style={styles.textoBotonGuardar}>
+                            {editandoPlatoId != null ? 'Guardar cambios' : 'Agregar plato'}
+                          </Text>
+                        )}
+                      </Pressable>
+                    </View>
+                  </View>
 
                   {cargandoPlatos && <ActivityIndicator size="large" color="#F28C28" style={styles.cargando} />}
 
@@ -645,6 +943,7 @@ export default function Admin() {
                     <View style={styles.mensajeCaja}>
                       <View style={styles.mensajeCard}>
                         <Text style={styles.mensajeTexto}>{errorPlatos}</Text>
+                        <Text style={styles.mensajeTexto}></Text>
                         <Pressable style={styles.botonClaro} onPress={() => setSeccion('carta')}>
                           <Text style={styles.textoBotonClaro}>Reintentar</Text>
                         </Pressable>
@@ -666,29 +965,38 @@ export default function Admin() {
                             <View key={plato.id} style={styles.platoFila}>
                               <View style={styles.platoInfo}>
                                 <Text style={styles.platoNombre} numberOfLines={2}>
-                                  {plato.nombre}
+                                  {plato.recomendado ? 'â­ ' : ''}{plato.nombre}
                                 </Text>
                                 <Text style={styles.platoPrecio}>
                                   {formatoPrecio(plato.precio)}
                                 </Text>
                               </View>
 
-                              <Pressable
-                                style={[
-                                  styles.chipDisponible,
-                                  plato.disponible ? styles.chipOk : styles.chipAgotado,
-                                ]}
-                                onPress={() => alternarDisponible(plato)}
-                              >
-                                <Text
+                              <View style={styles.platoAcciones}>
+                                <Pressable
                                   style={[
-                                    styles.chipDisponibleTexto,
-                                    !plato.disponible && styles.chipAgotadoTexto,
+                                    styles.chipDisponible,
+                                    plato.disponible ? styles.chipOk : styles.chipAgotado,
                                   ]}
+                                  onPress={() => alternarDisponible(plato)}
                                 >
-                                  {plato.disponible ? 'Disponible' : 'Agotado'}
-                                </Text>
-                              </Pressable>
+                                  <Text
+                                    style={[
+                                      styles.chipDisponibleTexto,
+                                      !plato.disponible && styles.chipAgotadoTexto,
+                                    ]}
+                                  >
+                                    {plato.disponible ? 'Disponible' : 'Agotado'}
+                                  </Text>
+                                </Pressable>
+
+                                <Pressable style={styles.botonIcono} onPress={() => iniciarEdicionPlato(plato)}>
+                                  <Text style={styles.botonIconoTexto}>âœï¸</Text>
+                                </Pressable>
+                                <Pressable style={styles.botonIcono} onPress={() => eliminarPlato(plato)}>
+                                  <Text style={styles.botonIconoTexto}>ðŸ—‘ï¸</Text>
+                                </Pressable>
+                              </View>
                             </View>
                           ))}
                         </View>
@@ -696,12 +1004,12 @@ export default function Admin() {
                     })}
                 </>
               )}
-                      {/* ============ SECCIÓN: MESAS (solo admin) ============ */}
+                      {/* ============ SECCIÃ“N: MESAS (solo admin) ============ */}
               {rol === 'admin' && seccion === 'mesas' && (
                 <>
                   <Text style={styles.titulo}>Mesas</Text>
                   <Text style={styles.subtitulo}>
-                    {editandoId ? 'Editando mesa' : 'Crea una nueva mesa'} · o selecciona una de la lista para editarla
+                    {editandoId ? 'Editando mesa' : 'Crea una nueva mesa'} Â· o selecciona una de la lista para editarla
                   </Text>
 
                   {/* Formulario crear / editar */}
@@ -738,14 +1046,14 @@ export default function Admin() {
                     <View style={styles.capacidadFila}>
                       <View style={styles.capacidadTextos}>
                         <Text style={styles.etiqueta}>Capacidad</Text>
-                        <Text style={styles.capacidadSubtitulo}>Hasta cuántas personas</Text>
+                        <Text style={styles.capacidadSubtitulo}>Hasta cuÃ¡ntas personas</Text>
                       </View>
                       <View style={styles.capacidadControles}>
                         <Pressable
                           style={styles.botonContador}
                           onPress={() => !guardandoMesa && setFormCapacidad(Math.max(1, formCapacidad - 1))}
                         >
-                          <Text style={styles.contadorTexto}>−</Text>
+                          <Text style={styles.contadorTexto}>âˆ’</Text>
                         </Pressable>
                         <Text style={styles.numeroCapacidad}>{formCapacidad}</Text>
                         <Pressable
@@ -761,7 +1069,7 @@ export default function Admin() {
                       <View style={styles.activaTextos}>
                         <Text style={styles.etiqueta}>Activa</Text>
                         <Text style={styles.capacidadSubtitulo}>
-                          Si la apagas, el cliente no podrá reservarla desde la app
+                          Si la apagas, el cliente no podrÃ¡ reservarla desde la app
                         </Text>
                       </View>
                       <View style={styles.activaControles}>
@@ -823,8 +1131,8 @@ export default function Admin() {
 
                   {!cargandoMesas && mesas.length === 0 && !errorMesas && (
                     <View style={styles.vacioMesa}>
-                      <Text style={styles.vacioEmoji}>🪑</Text>
-                      <Text style={styles.vacioTexto}>Aún no hay mesas</Text>
+                      <Text style={styles.vacioEmoji}>ðŸª‘</Text>
+                      <Text style={styles.vacioTexto}>AÃºn no hay mesas</Text>
                       <Text style={styles.vacioSub}>Crea la primera mesa con el formulario de arriba.</Text>
                     </View>
                   )}
@@ -844,7 +1152,7 @@ export default function Admin() {
                               {mesa.nombre}
                             </Text>
                             <Text style={styles.mesaDetalle}>
-                              {NOMBRE_ZONA[mesa.zona] ?? mesa.zona} · {mesa.capacidad} pers.
+                              {NOMBRE_ZONA[mesa.zona] ?? mesa.zona} Â· {mesa.capacidad} pers.
                             </Text>
                           </View>
                         </View>
@@ -875,6 +1183,170 @@ export default function Admin() {
                         </View>
                       </View>
                     ))}
+                </>
+              )}
+
+              {/* ============ SECCIÃ“N: HORARIOS (solo admin) ============ */}
+              {rol === 'admin' && seccion === 'horarios' && (
+                <>
+                  <Text style={styles.titulo}>Horarios</Text>
+                  <Text style={styles.subtitulo}>
+                    Configura los horarios por dÃ­a. Los cambios afectan quÃ© franjas ven los clientes al reservar.
+                  </Text>
+
+                  {/* SelecciÃ³n de dÃ­a */}
+                  <Text style={styles.etiqueta}>DÃ­a</Text>
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.filaNumero}
+                  >
+                    {DIAS_SEMANA_COMPLETOS.map((d) => {
+                      const elegido = diaEditar === d.clave;
+                      return (
+                        <Pressable
+                          key={d.clave}
+                          style={[styles.diaBtn, elegido && styles.diaBtnActivo]}
+                          onPress={() => !guardandoHorario && setDiaEditar(d.clave)}
+                        >
+                          <Text style={[styles.diaBtnTexto, elegido && styles.diaBtnTextoActivo]}>
+                            {d.etiqueta}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </ScrollView>
+
+                  {cargandoHorarios && (
+                    <ActivityIndicator size="large" color="#F28C28" style={styles.cargando} />
+                  )}
+
+                  {errorHorarios && (
+                    <View style={styles.mensajeCard}>
+                      <Text style={styles.mensajeTexto}>{errorHorarios}</Text>
+                      <Pressable style={styles.botonClaro} onPress={() => setIntentoHorarios((i) => i + 1)}>
+                        <Text style={styles.textoBotonClaro}>Reintentar</Text>
+                      </Pressable>
+                    </View>
+                  )}
+
+                  {!cargandoHorarios && (
+                    <>
+                      {/* Jornada almuerzo */}
+                      <View style={styles.horarioCard}>
+                        <View style={styles.horarioEncabezado}>
+                          <Text style={styles.horarioEmoji}>ðŸ½ï¸</Text>
+                          <Text style={styles.horarioTitulo}>Almuerzo</Text>
+                          <Pressable
+                            style={[styles.chipToggle, mAlmuerzoAct && styles.chipToggleOn]}
+                            onPress={() => !guardandoHorario && setMAlmuerzoAct(!mAlmuerzoAct)}
+                          >
+                            <Text style={[styles.chipToggleTexto, mAlmuerzoAct && styles.chipToggleTextoOn]}>
+                              {mAlmuerzoAct ? 'Activa' : 'Apagada'}
+                            </Text>
+                          </Pressable>
+                        </View>
+                        <View style={styles.horarioFila}>
+                          <View style={styles.horarioCampo}>
+                            <Text style={styles.horarioEtiqueta}>Inicio</Text>
+                            <TextInput
+                              style={styles.input}
+                              value={mAlmuerzoInicio}
+                              onChangeText={setMAlmuerzoInicio}
+                              placeholder="12:30"
+                              placeholderTextColor="rgba(255,255,255,0.45)"
+                              editable={!guardandoHorario && mAlmuerzoAct}
+                            />
+                          </View>
+                          <View style={styles.horarioCampo}>
+                            <Text style={styles.horarioEtiqueta}>Fin</Text>
+                            <TextInput
+                              style={styles.input}
+                              value={mAlmuerzoFin}
+                              onChangeText={setMAlmuerzoFin}
+                              placeholder="14:30"
+                              placeholderTextColor="rgba(255,255,255,0.45)"
+                              editable={!guardandoHorario && mAlmuerzoAct}
+                            />
+                          </View>
+                          <View style={styles.horarioCampo}>
+                            <Text style={styles.horarioEtiqueta}>Dur. (min)</Text>
+                            <TextInput
+                              style={styles.input}
+                              value={mAlmuerzoDur}
+                              onChangeText={setMAlmuerzoDur}
+                              keyboardType="number-pad"
+                              placeholderTextColor="rgba(255,255,255,0.45)"
+                              editable={!guardandoHorario && mAlmuerzoAct}
+                            />
+                          </View>
+                        </View>
+                      </View>
+
+                      {/* Jornada noche */}
+                      <View style={styles.horarioCard}>
+                        <View style={styles.horarioEncabezado}>
+                          <Text style={styles.horarioEmoji}>ðŸŒ™</Text>
+                          <Text style={styles.horarioTitulo}>Noche</Text>
+                          <Pressable
+                            style={[styles.chipToggle, mNocheAct && styles.chipToggleOn]}
+                            onPress={() => !guardandoHorario && setMNocheAct(!mNocheAct)}
+                          >
+                            <Text style={[styles.chipToggleTexto, mNocheAct && styles.chipToggleTextoOn]}>
+                              {mNocheAct ? 'Activa' : 'Apagada'}
+                            </Text>
+                          </Pressable>
+                        </View>
+                        <View style={styles.horarioFila}>
+                          <View style={styles.horarioCampo}>
+                            <Text style={styles.horarioEtiqueta}>Inicio</Text>
+                            <TextInput
+                              style={styles.input}
+                              value={mNocheInicio}
+                              onChangeText={setMNocheInicio}
+                              placeholder="17:00"
+                              placeholderTextColor="rgba(255,255,255,0.45)"
+                              editable={!guardandoHorario && mNocheAct}
+                            />
+                          </View>
+                          <View style={styles.horarioCampo}>
+                            <Text style={styles.horarioEtiqueta}>Fin</Text>
+                            <TextInput
+                              style={styles.input}
+                              value={mNocheFin}
+                              onChangeText={setMNocheFin}
+                              placeholder="23:00"
+                              placeholderTextColor="rgba(255,255,255,0.45)"
+                              editable={!guardandoHorario && mNocheAct}
+                            />
+                          </View>
+                          <View style={styles.horarioCampo}>
+                            <Text style={styles.horarioEtiqueta}>Dur. (min)</Text>
+                            <TextInput
+                              style={styles.input}
+                              value={mNocheDur}
+                              onChangeText={setMNocheDur}
+                              keyboardType="number-pad"
+                              placeholderTextColor="rgba(255,255,255,0.45)"
+                              editable={!guardandoHorario && mNocheAct}
+                            />
+                          </View>
+                        </View>
+                      </View>
+
+                      <Pressable
+                        style={[styles.botonGuardar, guardandoHorario && styles.botonDeshabilitado]}
+                        onPress={guardarHorarios}
+                        disabled={guardandoHorario}
+                      >
+                        {guardandoHorario ? (
+                          <ActivityIndicator color="#FFFFFF" />
+                        ) : (
+                          <Text style={styles.textoBotonGuardar}>Guardar horarios de este dÃ­a</Text>
+                        )}
+                      </Pressable>
+                    </>
+                  )}
                 </>
               )}
             </>
@@ -972,7 +1444,7 @@ const styles = StyleSheet.create({
   botonDeshabilitado: { opacity: 0.55 },
   textoPrincipal: { color: '#FFF', fontSize: 18, fontWeight: '800' },
 
-  /* ---------- Pestañas admin ---------- */
+  /* ---------- PestaÃ±as admin ---------- */
   tabsBar: { flexDirection: 'row', gap: 10, marginBottom: 16 },
   tab: {
     flex: 1,
@@ -1005,7 +1477,7 @@ const styles = StyleSheet.create({
   metaTexto: { color: '#C8C8C8', fontSize: 14, fontWeight: '600' },
   fechaTitulo: { color: '#FFFFFF', fontSize: 18, fontWeight: '800', marginBottom: 8 },
 
-  /* ---------- Días (altura FIJA) ---------- */
+  /* ---------- DÃ­as (altura FIJA) ---------- */
   diasScroll: { height: 78, marginBottom: 16 },
   filaDias: { alignItems: 'center', gap: 8, paddingRight: 8, paddingVertical: 2 },
   dia: {
@@ -1076,7 +1548,7 @@ const styles = StyleSheet.create({
   },
   textoCancelar: { color: '#FF9A94', fontSize: 15, fontWeight: '800' },
 
-  /* ---------- Estado vacío ---------- */
+  /* ---------- Estado vacÃ­o ---------- */
   vacioCaja: {
     alignItems: 'center',
     paddingVertical: 40,
@@ -1308,4 +1780,93 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.12)',
   },
+
+  /* ---------- Grupo de chips (categorÃ­as, etc.) ---------- */
+  chipsFila: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 },
+  chip: {
+    paddingHorizontal: 12,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: 'rgba(255,255,255,0.09)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center',
+  },
+  chipActivo: { backgroundColor: '#F28C28', borderColor: '#FFFFFF', borderWidth: 2 },
+  chipTexto: { color: '#C8C8C8', fontWeight: '700', fontSize: 13 },
+  chipTextoActivo: { color: '#FFFFFF' },
+  inputPrecio: { flex: 1, maxWidth: 180 },
+
+  /* ---------- Switch recomendado ---------- */
+  switchRecomendado: {
+    minWidth: 64,
+    height: 38,
+    borderRadius: 19,
+    paddingHorizontal: 18,
+    backgroundColor: 'rgba(255,255,255,0.09)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  switchRecomendadoActivo: { backgroundColor: '#F2B928', borderColor: '#FFFFFF' },
+  switchRecomendadoTexto: { color: '#C8C8C8', fontWeight: '800', fontSize: 15 },
+  switchRecomendadoTextoActivo: { color: '#1A1A1A' },
+
+  /* ---------- Acciones de plato (editar / borrar) ---------- */
+  platoAcciones: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  botonIcono: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.09)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.22)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  botonIconoTexto: { fontSize: 16 },
+
+  /* ---------- Horarios ---------- */
+  filaNumero: { flexDirection: 'row', gap: 8, paddingBottom: 14, alignItems: 'center' },
+  diaBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(18,18,18,0.78)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.18)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  diaBtnActivo: { backgroundColor: '#F28C28', borderColor: '#FFFFFF', borderWidth: 2 },
+  diaBtnTexto: { color: '#C8C8C8', fontWeight: '800', fontSize: 15 },
+  diaBtnTextoActivo: { color: '#FFFFFF' },
+
+  horarioCard: {
+    backgroundColor: 'rgba(18,18,18,0.85)',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.14)',
+    padding: 16,
+    marginBottom: 16,
+  },
+  horarioEncabezado: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 },
+  horarioEmoji: { fontSize: 22 },
+  horarioTitulo: { flex: 1, color: '#FFFFFF', fontSize: 18, fontWeight: '800' },
+  chipToggle: {
+    paddingHorizontal: 14,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center',
+  },
+  chipToggleOn: { backgroundColor: '#4CAF50', borderColor: '#7EE2A5' },
+  chipToggleTexto: { color: '#FFB0A8', fontWeight: '800', fontSize: 12 },
+  chipToggleTextoOn: { color: '#FFFFFF' },
+  horarioFila: { flexDirection: 'row', gap: 8 },
+  horarioCampo: { flex: 1 },
+  horarioEtiqueta: { color: '#C8C8C8', fontSize: 12, fontWeight: '700', marginBottom: 6 },
 });
