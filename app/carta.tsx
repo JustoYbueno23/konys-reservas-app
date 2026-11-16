@@ -32,18 +32,18 @@ const fillStyle = {
 const CATEGORIAS = [
   { id: 'recomendados', label: 'Recomendados', imagen: require('../assets/images/categorias/recomendados.webp') },
   { id: 'entradas', label: 'Entradas', imagen: require('../assets/images/categorias/entradas.webp') },
-  { id: 'menu-infantil', label: 'MenÃº Infantil', imagen: require('../assets/images/categorias/menu-infantil.webp') },
+  { id: 'menu-infantil', label: 'Menú Infantil', imagen: require('../assets/images/categorias/menu-infantil.webp') },
   { id: 'pizzas', label: 'Pizzas', imagen: require('../assets/images/categorias/pizzas.webp') },
   { id: 'desgranados', label: 'Desgranados', imagen: require('../assets/images/categorias/desgranados.webp') },
-  { id: 'papas', label: 'Papas IkÃ³nicas', imagen: require('../assets/images/categorias/papas.webp') },
-  { id: 'lasana', label: 'LasaÃ±a', imagen: require('../assets/images/categorias/lasana.webp') },
+  { id: 'papas', label: 'Papas Ikónicas', imagen: require('../assets/images/categorias/papas.webp') },
+  { id: 'lasana', label: 'Lasaña', imagen: require('../assets/images/categorias/lasana.webp') },
   { id: 'granizados', label: 'Granizados', imagen: require('../assets/images/categorias/granizados.webp') },
   { id: 'sodas', label: 'Sodas', imagen: require('../assets/images/categorias/sodas.webp') },
-  { id: 'bebidas', label: 'Bebidas FrÃ­as', imagen: require('../assets/images/categorias/bebidas.webp') },
+  { id: 'bebidas', label: 'Bebidas Frías', imagen: require('../assets/images/categorias/bebidas.webp') },
   { id: 'cerveza', label: 'Cerveza', imagen: require('../assets/images/categorias/cerveza.webp') },
-  { id: 'cocteles', label: 'CÃ³cteles', imagen: require('../assets/images/categorias/cocteles.webp') },
+  { id: 'cocteles', label: 'Cócteles', imagen: require('../assets/images/categorias/cocteles.webp') },
   { id: 'postres', label: 'Postres', imagen: require('../assets/images/categorias/postres.webp') },
-  { id: 'almuerzos', label: 'MenÃº Almuerzos', imagen: require('../assets/images/categorias/almuerzos.webp') },
+  { id: 'almuerzos', label: 'Menú Almuerzos', imagen: require('../assets/images/categorias/almuerzos.webp') },
   { id: 'congelados', label: 'Congelados', imagen: require('../assets/images/categorias/congelados.webp') },
 ];
 
@@ -127,7 +127,7 @@ export default function Carta() {
 
       if (!activo) return;
       if (err) {
-        setError('No se pudo cargar la carta. Revisa tu conexiÃ³n.');
+        setError('No se pudo cargar la carta. Revisa tu conexión.');
       } else {
         setPlatos((data as Plato[]) || []);
       }
