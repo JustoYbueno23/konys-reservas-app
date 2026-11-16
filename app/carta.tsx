@@ -4,7 +4,9 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
+  Image,
   ImageBackground,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -27,21 +29,21 @@ const fillStyle = {
 } as const;
 
 const CATEGORIAS = [
-  { id: 'recomendados', label: 'Recomendados', imagen: require('../assets/images/categorias/recomendados.jpg') },
-  { id: 'entradas', label: 'Entradas', imagen: require('../assets/images/categorias/entradas.jpg') },
-  { id: 'menu-infantil', label: 'Menú Infantil', imagen: require('../assets/images/categorias/menu-infantil.jpg') },
-  { id: 'pizzas', label: 'Pizzas', imagen: require('../assets/images/categorias/pizzas.jpg') },
-  { id: 'desgranados', label: 'Desgranados', imagen: require('../assets/images/categorias/desgranados.jpg') },
-  { id: 'papas', label: 'Papas Ikónicas', imagen: require('../assets/images/categorias/papas.jpg') },
-  { id: 'lasana', label: 'Lasaña', imagen: require('../assets/images/categorias/lasana.jpg') },
-  { id: 'granizados', label: 'Granizados', imagen: require('../assets/images/categorias/granizados.jpg') },
-  { id: 'sodas', label: 'Sodas', imagen: require('../assets/images/categorias/sodas.jpg') },
-  { id: 'bebidas', label: 'Bebidas Frías', imagen: require('../assets/images/categorias/bebidas.jpg') },
-  { id: 'cerveza', label: 'Cerveza', imagen: require('../assets/images/categorias/cerveza.jpg') },
-  { id: 'cocteles', label: 'Cócteles', imagen: require('../assets/images/categorias/cocteles.jpg') },
-  { id: 'postres', label: 'Postres', imagen: require('../assets/images/categorias/postres.jpg') },
-  { id: 'almuerzos', label: 'Menú Almuerzos', imagen: require('../assets/images/categorias/almuerzos.jpg') },
-  { id: 'congelados', label: 'Congelados', imagen: require('../assets/images/categorias/congelados.jpg') },
+  { id: 'recomendados', label: 'Recomendados', imagen: require('../assets/images/categorias/recomendados.webp') },
+  { id: 'entradas', label: 'Entradas', imagen: require('../assets/images/categorias/entradas.webp') },
+  { id: 'menu-infantil', label: 'Menú Infantil', imagen: require('../assets/images/categorias/menu-infantil.webp') },
+  { id: 'pizzas', label: 'Pizzas', imagen: require('../assets/images/categorias/pizzas.webp') },
+  { id: 'desgranados', label: 'Desgranados', imagen: require('../assets/images/categorias/desgranados.webp') },
+  { id: 'papas', label: 'Papas Ikónicas', imagen: require('../assets/images/categorias/papas.webp') },
+  { id: 'lasana', label: 'Lasaña', imagen: require('../assets/images/categorias/lasana.webp') },
+  { id: 'granizados', label: 'Granizados', imagen: require('../assets/images/categorias/granizados.webp') },
+  { id: 'sodas', label: 'Sodas', imagen: require('../assets/images/categorias/sodas.webp') },
+  { id: 'bebidas', label: 'Bebidas Frías', imagen: require('../assets/images/categorias/bebidas.webp') },
+  { id: 'cerveza', label: 'Cerveza', imagen: require('../assets/images/categorias/cerveza.webp') },
+  { id: 'cocteles', label: 'Cócteles', imagen: require('../assets/images/categorias/cocteles.webp') },
+  { id: 'postres', label: 'Postres', imagen: require('../assets/images/categorias/postres.webp') },
+  { id: 'almuerzos', label: 'Menú Almuerzos', imagen: require('../assets/images/categorias/almuerzos.webp') },
+  { id: 'congelados', label: 'Congelados', imagen: require('../assets/images/categorias/congelados.webp') },
 ];
 
 type Plato = {
@@ -55,17 +57,67 @@ type Plato = {
   recomendado: boolean;
 };
 
+function FichaPlato({ plato, alCerrar }: { plato: Plato; alCerrar: () => void }) {
+  const imagen = imagenPlato(plato.nombre);
+  const categoria = CATEGORIAS.find((c) => c.id === plato.categoria);
+
+  return (
+    <Modal visible={!!plato} animationType="slide" onRequestClose={alCerrar}>
+      <SafeAreaView style={styles.fichaPantalla}>
+        <StatusBar style="light" />
+        <ScrollView contentContainerStyle={styles.fichaContenido}>
+          <View style={styles.fichaImagenCaja}>
+            {imagen ? (
+              <Image source={imagen} style={styles.fichaImagen} resizeMode="cover" />
+            ) : (
+              <View style={styles.fichaImagenVacia}>
+                <Ionicons name="restaurant-outline" size={70} color="#F28C28" />
+              </View>
+            )}
+            <Pressable style={styles.fichaCerrar} onPress={alCerrar}>
+              <Ionicons name="close" size={24} color="#FFFFFF" />
+            </Pressable>
+          </View>
+
+          <View style={styles.fichaDatos}>
+            <Text style={styles.fichaCategoria}>{categoria?.label ?? plato.categoria}</Text>
+            <Text style={styles.fichaNombre}>{plato.nombre}</Text>
+            <Text style={styles.fichaPrecio}>{formatoPrecio(plato.precio)}</Text>
+
+            {plato.descripcion ? (
+              <Text style={styles.fichaDescripcion}>{plato.descripcion}</Text>
+            ) : (
+              <Text style={styles.fichaSinDescripcion}>Producto de la carta de Konys</Text>
+            )}
+
+            {plato.recomendado && (
+              <View style={styles.fichaRecomendado}>
+                <Ionicons name="star" size={15} color="#F28C28" />
+                <Text style={styles.fichaRecomendadoTexto}>Recomendado</Text>
+              </View>
+            )}
+
+            <Pressable style={styles.fichaBoton} onPress={alCerrar}>
+              <Text style={styles.fichaBotonTexto}>Volver a la carta</Text>
+            </Pressable>
+          </View>
+        </ScrollView>
+      </SafeAreaView>
+    </Modal>
+  );
+}
+
 export default function Carta() {
   const [seleccion, setSeleccion] = useState<string | null>(null);
   const [platos, setPlatos] = useState<Plato[]>([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [intento, setIntento] = useState(0);
+  const [platoAbierto, setPlatoAbierto] = useState<Plato | null>(null);
 
   useEffect(() => {
     let activo = true;
 
-    
     async function cargar() {
       setCargando(true);
       setError(null);
@@ -127,7 +179,6 @@ export default function Carta() {
     );
   }
 
-  
   if (categoriaActual) {
     return (
       <ImageBackground source={FONDO} style={styles.fondo} resizeMode="cover">
@@ -155,9 +206,8 @@ export default function Carta() {
             ListEmptyComponent={<Text style={styles.vacio}>No hay productos en este apartado.</Text>}
             renderItem={({ item }) => {
               const imagen = imagenPlato(item.nombre);
-              const agotado = !item.disponible;
               return (
-                <View style={[styles.carta, agotado && styles.cartaAgotada]}>
+                <Pressable style={styles.carta} onPress={() => setPlatoAbierto(item)}>
                   {imagen ? (
                     <ImageBackground
                       source={imagen}
@@ -167,18 +217,11 @@ export default function Carta() {
                     />
                   ) : (
                     <View style={styles.cartaIconoFondo}>
-                      
                       <Ionicons name="restaurant-outline" size={44} color="#F28C28" />
                     </View>
                   )}
 
                   <View style={styles.cartaGradiente} pointerEvents="none" />
-
-                  {agotado && (
-                    <View style={styles.badgeAgotado}>
-                      <Text style={styles.badgeAgotadoTexto}>AGOTADO</Text>
-                    </View>
-                  )}
 
                   <View style={styles.cartaContenido}>
                     <Text style={styles.nombre} numberOfLines={2}>
@@ -186,21 +229,22 @@ export default function Carta() {
                     </Text>
                     <View style={styles.filaInf}>
                       <Text style={styles.precio}>{formatoPrecio(item.precio)}</Text>
-                      {item.recomendado && (
-                        <Ionicons name="star" size={16} color="#F28C28" />
-                      )}
+                      <Ionicons name="information-circle-outline" size={17} color="#F2EFEA" />
                     </View>
                   </View>
-                </View>
+                </Pressable>
               );
             }}
           />
         </SafeAreaView>
+
+        {platoAbierto && (
+          <FichaPlato plato={platoAbierto} alCerrar={() => setPlatoAbierto(null)} />
+        )}
       </ImageBackground>
     );
   }
 
-  
   return (
     <ImageBackground source={FONDO} style={styles.fondo} resizeMode="cover">
       <View style={styles.overlay} pointerEvents="none" />
@@ -305,7 +349,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.32)',
+    backgroundColor: 'rgba(0,0,0,0.38)',
   },
   tarjetaCategoriaContenido: {
     flex: 1,
@@ -381,9 +425,6 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.15)',
     backgroundColor: 'rgba(18,18,18,0.85)',
   },
-  cartaAgotada: {
-    opacity: 0.55,
-  },
   cartaImagen: {
     borderRadius: 18,
   },
@@ -429,22 +470,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '800',
   },
-  badgeAgotado: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    backgroundColor: 'rgba(0,0,0,0.75)',
-    borderWidth: 1.5,
-    borderColor: '#FF6B6B',
-    borderRadius: 12,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-  },
-  badgeAgotadoTexto: {
-    color: '#FF6B6B',
-    fontSize: 11,
-    fontWeight: '800',
-  },
   vacio: {
     color: '#FFF',
     textAlign: 'center',
@@ -479,5 +504,96 @@ const styles = StyleSheet.create({
     color: '#FFF',
     fontWeight: '800',
     fontSize: 16,
+  },
+  fichaPantalla: {
+    flex: 1,
+    backgroundColor: '#12100E',
+  },
+  fichaContenido: {
+    paddingBottom: 30,
+  },
+  fichaImagenCaja: {
+    width: '100%',
+    height: 320,
+    backgroundColor: '#241E17',
+  },
+  fichaImagen: {
+    width: '100%',
+    height: 320,
+  },
+  fichaImagenVacia: {
+    width: '100%',
+    height: 320,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  fichaCerrar: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  fichaDatos: {
+    padding: 22,
+  },
+  fichaCategoria: {
+    color: '#F28C28',
+    fontSize: 13,
+    fontWeight: '800',
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+  },
+  fichaNombre: {
+    color: '#FFFFFF',
+    fontSize: 30,
+    fontWeight: '800',
+    marginTop: 6,
+  },
+  fichaPrecio: {
+    color: '#F2EFEA',
+    fontSize: 22,
+    fontWeight: '800',
+    marginTop: 8,
+  },
+  fichaDescripcion: {
+    color: '#E8E4DE',
+    fontSize: 17,
+    lineHeight: 26,
+    marginTop: 20,
+  },
+  fichaSinDescripcion: {
+    color: '#9DA9B7',
+    fontSize: 15,
+    fontStyle: 'italic',
+    marginTop: 20,
+  },
+  fichaRecomendado: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 18,
+  },
+  fichaRecomendadoTexto: {
+    color: '#F28C28',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  fichaBoton: {
+    backgroundColor: '#F2EFEA',
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 26,
+  },
+  fichaBotonTexto: {
+    color: '#1A1A1A',
+    fontSize: 17,
+    fontWeight: '800',
   },
 });
