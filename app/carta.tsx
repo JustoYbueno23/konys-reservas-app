@@ -131,17 +131,13 @@ export default function Carta() {
     }
   };
 
-  const gesto = useRef(
+  const gestoPista = useRef(
     PanResponder.create({
-      onStartShouldSetPanResponder: () => false,
-      onMoveShouldSetPanResponder: (_evento, estado) => {
-        if (platoAbierto) return false;
-        const inicio = estado.y0;
-        const desdeAbajo = inicio > SCREEN_HEIGHT * 0.78;
-        const subio = estado.dy < -80;
-        return desdeAbajo && subio && Math.abs(estado.dx) < 40;
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: () => true,
+      onPanResponderRelease: (_evento, estado) => {
+        if (estado.dy < -50 && Math.abs(estado.dx) < 60) volverAlInicio();
       },
-      onPanResponderGrant: () => volverAlInicio(),
     })
   ).current;
 
@@ -214,7 +210,7 @@ export default function Carta() {
       <ImageBackground source={FONDO} style={styles.fondo} resizeMode="cover">
         <View style={styles.overlay} pointerEvents="none" />
 
-        <View style={styles.container} {...gesto.panHandlers}>
+        <View style={styles.container}>
           <StatusBar style="light" />
 
           <View style={styles.encabezadoLista}>
@@ -267,7 +263,7 @@ export default function Carta() {
             }}
           />
 
-          <View style={styles.pistaGesto} pointerEvents="none">
+          <View style={styles.pistaGesto} {...gestoPista.panHandlers}>
             <Ionicons name="arrow-up" size={15} color={COLORES_PISTA} />
             <Text style={styles.pistaGestoTexto}>Desliza desde abajo para volver al inicio</Text>
           </View>
@@ -284,7 +280,7 @@ export default function Carta() {
     <ImageBackground source={FONDO} style={styles.fondo} resizeMode="cover">
       <View style={styles.overlay} pointerEvents="none" />
 
-      <View style={styles.container} {...gesto.panHandlers}>
+      <View style={styles.container}>
         <StatusBar style="light" />
 
         <View style={styles.encabezado}>
@@ -322,7 +318,7 @@ export default function Carta() {
           })}
         </ScrollView>
 
-        <View style={styles.pistaGesto} pointerEvents="none">
+        <View style={styles.pistaGesto} {...gestoPista.panHandlers}>
           <Ionicons name="arrow-up" size={15} color={COLORES_PISTA} />
           <Text style={styles.pistaGestoTexto}>Desliza desde abajo para volver al inicio</Text>
         </View>
@@ -550,7 +546,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    paddingVertical: 10,
+    paddingVertical: 18,
+    backgroundColor: 'rgba(0,0,0,0.35)',
   },
   pistaGestoTexto: {
     color: COLORES_PISTA,
