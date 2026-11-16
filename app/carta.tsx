@@ -122,6 +122,7 @@ export default function Carta() {
   const [error, setError] = useState<string | null>(null);
   const [intento, setIntento] = useState(0);
   const [platoAbierto, setPlatoAbierto] = useState<Plato | null>(null);
+  const desplazamiento = useRef(0);
 
   const volverAlInicio = () => {
     if (router.canGoBack()) {
@@ -131,13 +132,15 @@ export default function Carta() {
     }
   };
 
-  const gestoPista = useRef(
+  const gestoSubida = useRef(
     PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: () => true,
-      onPanResponderRelease: (_evento, estado) => {
-        if (estado.dy < -50 && Math.abs(estado.dx) < 60) volverAlInicio();
-      },
+      onStartShouldSetPanResponder: () => false,
+      onMoveShouldSetPanResponderCapture: (_evento, estado) =>
+        !platoAbierto &&
+        desplazamiento.current <= 1 &&
+        estado.dy < -60 &&
+        Math.abs(estado.dx) < 60,
+      onPanResponderRelease: () => volverAlInicio(),
     })
   ).current;
 
@@ -210,7 +213,7 @@ export default function Carta() {
       <ImageBackground source={FONDO} style={styles.fondo} resizeMode="cover">
         <View style={styles.overlay} pointerEvents="none" />
 
-        <View style={styles.container}>
+        <View style={styles.container} {...gestoSubida.panHandlers}>
           <StatusBar style="light" />
 
           <View style={styles.encabezadoLista}>
@@ -229,6 +232,10 @@ export default function Carta() {
             numColumns={2}
             columnWrapperStyle={styles.fila}
             contentContainerStyle={styles.grid}
+            onScroll={(evento) => {
+              desplazamiento.current = evento.nativeEvent.contentOffset.y;
+            }}
+            scrollEventThrottle={16}
             ListEmptyComponent={<Text style={styles.vacio}>No hay productos en este apartado.</Text>}
             renderItem={({ item }) => {
               const imagen = imagenPlato(item.nombre);
@@ -263,9 +270,9 @@ export default function Carta() {
             }}
           />
 
-          <View style={styles.pistaGesto} {...gestoPista.panHandlers}>
+          <View style={styles.pistaGesto} pointerEvents="none">
             <Ionicons name="arrow-up" size={15} color={COLORES_PISTA} />
-            <Text style={styles.pistaGestoTexto}>Desliza desde abajo para volver al inicio</Text>
+            <Text style={styles.pistaGestoTexto}>Desliza hacia arriba para volver al inicio</Text>
           </View>
         </View>
 
@@ -280,7 +287,7 @@ export default function Carta() {
     <ImageBackground source={FONDO} style={styles.fondo} resizeMode="cover">
       <View style={styles.overlay} pointerEvents="none" />
 
-      <View style={styles.container}>
+      <View style={styles.container} {...gestoSubida.panHandlers}>
         <StatusBar style="light" />
 
         <View style={styles.encabezado}>
@@ -291,6 +298,10 @@ export default function Carta() {
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.listaCategorias}
+          onScroll={(evento) => {
+            desplazamiento.current = evento.nativeEvent.contentOffset.y;
+          }}
+          scrollEventThrottle={16}
         >
           {CATEGORIAS.map((c) => {
             const cantidad = c.id === 'recomendados'
@@ -318,9 +329,9 @@ export default function Carta() {
           })}
         </ScrollView>
 
-        <View style={styles.pistaGesto} {...gestoPista.panHandlers}>
+        <View style={styles.pistaGesto} pointerEvents="none">
           <Ionicons name="arrow-up" size={15} color={COLORES_PISTA} />
-          <Text style={styles.pistaGestoTexto}>Desliza desde abajo para volver al inicio</Text>
+          <Text style={styles.pistaGestoTexto}>Desliza hacia arriba para volver al inicio</Text>
         </View>
       </View>
     </ImageBackground>
