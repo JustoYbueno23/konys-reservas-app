@@ -1,4 +1,12 @@
-﻿import { useRouter } from 'expo-router';
+﻿// -------------------------------------------------------------
+// PANTALLA: Panel de administración (solo personal del restaurante)
+// Secciones: Reservas, Carta, Mesas y Horarios.
+// El login usa correo y contraseña; el rol se lee de la
+// tabla perfiles (admin ve todo, mesero solo reservas).
+// Navegación: https://docs.expo.dev/router/advanced/navigation/
+// Autenticación: https://supabase.com/docs/guides/auth
+// -------------------------------------------------------------
+import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useMemo, useState } from 'react';
 import {
@@ -19,10 +27,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../services/supabase';
 import { imagenPlato } from '../services/platos-imagenes';
 import { fechaATexto, proximosDias } from '../utils/fechas';
-
-export const options = {
-  headerShown: false,
-};
+import { formatoPrecio } from '../utils/formato';
 
 const FONDO = require('../assets/images/FondoReservarMesa.png');
 
@@ -46,10 +51,6 @@ const CATEGORIA_INFO: Record<string, { label: string; icon: keyof typeof Ionicon
   almuerzos: { label: 'Menú Almuerzos', icon: 'restaurant' },
   congelados: { label: 'Congelados', icon: 'snow' },
 };
-
-function formatoPrecio(p: number) {
-  return '$ ' + String(p).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-}
 
 function formatoFechaLarga(fechaTexto: string) {
   const [a, m, d] = fechaTexto.split('-').map(Number);
@@ -1111,9 +1112,12 @@ export default function Admin() {
                                   )}
                                 </View>
                                 <View style={styles.platoInfo}>
-                                  <Text style={styles.platoNombre} numberOfLines={2}>
-                                    {plato.recomendado ? '★ ' : ''}{plato.nombre}
-                                  </Text>
+                                  <View style={styles.platoNombreFila}>
+                                    {plato.recomendado && (
+                                      <Ionicons name="star" size={13} color={COLORES.ambar} />
+                                    )}
+                                    <Text style={styles.platoNombre} numberOfLines={2}>{plato.nombre}</Text>
+                                  </View>
                                   <Text style={styles.platoPrecio}>{formatoPrecio(plato.precio)}</Text>
                                 </View>
                                 <Pressable
@@ -1998,6 +2002,7 @@ const styles = StyleSheet.create({
   platoImagenFuente: { width: 64, height: 64 },
   platoInfo: { flex: 1, marginRight: 8 },
   platoNombre: { color: COLORES.texto, fontSize: 14, fontWeight: '800' },
+  platoNombreFila: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   platoPrecio: { color: COLORES.crema, fontSize: 14, fontWeight: '700', marginTop: 2 },
   chipDisponibilidad: {
     flexDirection: 'row',

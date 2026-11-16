@@ -1,14 +1,28 @@
+// -------------------------------------------------------------
+// PANTALLA: Inicio
+// Logo de Konys Pizza, botón de reservar, horario y botón "A"
+// para el personal del restaurante. Al deslizar hacia abajo
+// se abre la carta.
+// Navegación: https://docs.expo.dev/router/advanced/navigation/
+// ScrollView: https://reactnative.dev/docs/scrollview
+// -------------------------------------------------------------
 import { useFocusEffect, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Dimensions, ImageBackground, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  Dimensions,
+  ImageBackground,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BotonAdmin } from '../components/BotonAdmin';
-import { supabase } from '../services/supabase';
-
-export const options = {
-  headerShown: false,
-};
+import { obtenerMesasActivas } from '../services/mesas';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -23,21 +37,25 @@ export default function Inicio() {
   const router = useRouter();
   const scrollRef = useRef<ScrollView>(null);
 
-  const [mesas, setMesas] = useState<any[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [hasNavigated, setHasNavigated] = useState(false);
 
+  // Solo comprueba que hay conexión con el restaurante.
+  // La pantalla no muestra datos de mesas, por eso no se guardan
   useEffect(() => {
-    supabase
-      .from('mesas')
-      .select('*')
-      .then(({ data, error }) => {
-        if (error) {
-          setError(error.message);
-        } else {
-          setMesas(data || []);
-        }
+    let activo = true;
+
+    obtenerMesasActivas()
+      .then(() => {
+        if (activo) setError(null);
+      })
+      .catch(() => {
+        if (activo) setError('No se pudo conectar con el restaurante. Revisa tu conexión.');
       });
+
+    return () => {
+      activo = false;
+    };
   }, []);
 
   useFocusEffect(
@@ -47,7 +65,8 @@ export default function Inicio() {
     }, [])
   );
 
-  const handleScroll = (event: any) => {
+  // Al deslizar hacia abajo se abre la carta (una sola vez por llegada a la pantalla)
+  const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     const offsetY = event.nativeEvent.contentOffset.y;
     if (offsetY > 100 && !hasNavigated) {
       setHasNavigated(true);
@@ -73,6 +92,7 @@ export default function Inicio() {
         >
           <View style={styles.overlay} />
 
+          {/* Boton para el personal del restaurante */}
           <BotonAdmin tamano="grande" style={styles.adminUbicacion} />
 
           <View style={styles.content}>
@@ -88,6 +108,7 @@ export default function Inicio() {
               <Text style={styles.chipText}>12:30–2:30 · 5–11 p. m.</Text>
             </View>
 
+            {/* Circulo grande que lleva a elegir la mesa */}
             <View style={styles.anillo}>
               <Pressable
                 style={styles.reservarButton}
@@ -99,6 +120,7 @@ export default function Inicio() {
               </Pressable>
             </View>
 
+            {/* Aviso solo si no hay conexión con el restaurante */}
             {error && <Text style={styles.estadoError}>Error: {error}</Text>}
 
             <View style={styles.hint} pointerEvents="none">
