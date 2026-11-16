@@ -3,6 +3,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Dimensions, ImageBackground, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { BotonAdmin } from '../components/BotonAdmin';
 import { supabase } from '../services/supabase';
 
 export const options = {
@@ -72,12 +73,7 @@ export default function Inicio() {
         >
           <View style={styles.overlay} />
 
-          <Pressable
-            style={styles.adminButton}
-            onPress={() => router.push('/admin')}
-          >
-            <Text style={styles.adminLetter}>A</Text>
-          </Pressable>
+          <BotonAdmin tamano="grande" style={styles.adminUbicacion} />
 
           <View style={styles.content}>
             <View style={styles.logoBox}>
@@ -135,24 +131,11 @@ const styles = StyleSheet.create({
     bottom: 0,
     backgroundColor: 'rgba(0, 0, 0, 0.55)',
   },
-  adminButton: {
+  adminUbicacion: {
     position: 'absolute',
     top: 56,
     right: 20,
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    borderWidth: 2,
-    borderColor: '#FFFFFF',
-    backgroundColor: CAJA,
-    justifyContent: 'center',
-    alignItems: 'center',
     zIndex: 10,
-  },
-  adminLetter: {
-    color: '#FFFFFF',
-    fontWeight: 'bold',
-    fontSize: 20,
   },
   content: {
     height: SCREEN_HEIGHT,

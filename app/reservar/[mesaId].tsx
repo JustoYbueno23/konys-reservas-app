@@ -12,6 +12,8 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { BotonPrincipal } from '../../components/BotonPrincipal';
+import { BotonVolver } from '../../components/BotonVolver';
 import { obtenerDiasConServicio, obtenerHorariosDia } from '../../services/horarios';
 import { obtenerMesasActivas } from '../../services/mesas';
 import { obtenerHorasOcupadas } from '../../services/reservas';
@@ -185,9 +187,7 @@ export default function DiaYHora() {
         <StatusBar style="light" />
 
         <ScrollView contentContainerStyle={styles.contenido}>
-          <Pressable style={styles.botonVolver} onPress={() => router.back()}>
-            <Text style={styles.textoVolver}>Volver</Text>
-          </Pressable>
+          <BotonVolver style={{ marginBottom: 14 }} />
 
           <Text style={styles.titulo}>Día y hora</Text>
 
@@ -330,13 +330,12 @@ export default function DiaYHora() {
                     </Pressable>
                   </View>
 
-                  <Pressable
-                    style={[styles.botonContinuar, !horaElegida && styles.botonApagado]}
-                    disabled={!horaElegida}
+                  <BotonPrincipal
+                    texto="Continuar"
                     onPress={continuar}
-                  >
-                    <Text style={styles.textoContinuar}>Continuar</Text>
-                  </Pressable>
+                    disabled={!horaElegida}
+                    style={{ marginTop: 12 }}
+                  />
                 </>
               )}
             </>
@@ -366,21 +365,6 @@ const styles = StyleSheet.create({
   contenido: {
     padding: 20,
     paddingBottom: 40,
-  },
-  botonVolver: {
-    alignSelf: 'flex-start',
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: COLORES.borde,
-    backgroundColor: 'rgba(0, 0, 0, 0.45)',
-    marginBottom: 14,
-  },
-  textoVolver: {
-    color: COLORES.texto,
-    fontSize: 15,
-    fontWeight: '600',
   },
   titulo: {
     color: COLORES.texto,
@@ -512,22 +496,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     minWidth: 36,
     textAlign: 'center',
-  },
-  botonContinuar: {
-    backgroundColor: COLORES.crema,
-    height: 56,
-    borderRadius: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 12,
-  },
-  botonApagado: {
-    opacity: 0.35,
-  },
-  textoContinuar: {
-    color: COLORES.oscuro,
-    fontSize: 18,
-    fontWeight: 'bold',
   },
   botonClaro: {
     alignSelf: 'center',

@@ -19,6 +19,9 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { BotonAdmin } from '../../components/BotonAdmin';
+import { BotonPrincipal } from '../../components/BotonPrincipal';
+import { BotonVolver } from '../../components/BotonVolver';
 import { obtenerMesasActivas } from '../../services/mesas';
 import { numeroDeMesa } from '../../utils/formato';
 
@@ -140,14 +143,10 @@ export default function ReservarIndex() {
 
         <ScrollView contentContainerStyle={styles.contenido}>
           <View style={styles.barraSuperior}>
-            <Pressable style={styles.botonVolver} onPress={() => router.back()}>
-              <Text style={styles.textoVolver}>Volver</Text>
-            </Pressable>
+            <BotonVolver />
 
             {/* Atajo para el personal del restaurante */}
-            <Pressable style={styles.botonAdmin} onPress={() => router.push('/admin')}>
-              <Text style={styles.letraAdmin}>A</Text>
-            </Pressable>
+            <BotonAdmin />
           </View>
 
           <Text style={styles.titulo}>Elige tu mesa</Text>
@@ -206,13 +205,12 @@ export default function ReservarIndex() {
               );
             })}
 
-          <Pressable
-            style={[styles.botonContinuar, !mesaElegida && styles.botonApagado]}
+          <BotonPrincipal
+            texto="Continuar"
             onPress={continuar}
             disabled={!mesaElegida}
-          >
-            <Text style={styles.textoContinuar}>Continuar</Text>
-          </Pressable>
+            style={{ marginTop: 6 }}
+          />
         </ScrollView>
       </SafeAreaView>
     </ImageBackground>
@@ -244,34 +242,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 16,
-  },
-  botonVolver: {
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: COLORES.borde,
-    backgroundColor: 'rgba(0, 0, 0, 0.45)',
-  },
-  textoVolver: {
-    color: COLORES.texto,
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  botonAdmin: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-    borderWidth: 1.5,
-    borderColor: 'rgba(255, 255, 255, 0.7)',
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  letraAdmin: {
-    color: COLORES.texto,
-    fontSize: 18,
-    fontWeight: 'bold',
   },
   titulo: {
     color: COLORES.texto,
@@ -407,22 +377,6 @@ const styles = StyleSheet.create({
   textoBotonClaro: {
     color: COLORES.oscuro,
     fontSize: 15,
-    fontWeight: 'bold',
-  },
-  botonContinuar: {
-    backgroundColor: COLORES.crema,
-    height: 58,
-    borderRadius: 29,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 6,
-  },
-  botonApagado: {
-    opacity: 0.35,
-  },
-  textoContinuar: {
-    color: COLORES.oscuro,
-    fontSize: 18,
     fontWeight: 'bold',
   },
 });
