@@ -119,3 +119,13 @@ export function franjaPasada(fechaTexto: string, horaInicio: string): boolean {
     const minutosAhora = ahora.getHours() * 60 + ahora.getMinutes();
     return horaAMinutos(horaInicio) <= minutosAhora;
 }
+
+export const DIAS_CORTOS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+export const MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+
+// "2026-11-16" -> "Dom 16 nov"
+export function formatoFechaLarga(fechaTexto: string): string {
+    const [a, m, d] = fechaTexto.split('-').map(Number);
+    const dia = DIAS_CORTOS[new Date(a, m - 1, d).getDay()];
+    return `${dia} ${d} ${MESES[m - 1]}`;
+}
