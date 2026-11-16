@@ -3,6 +3,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  FlatList,
   ImageBackground,
   Pressable,
   ScrollView,
@@ -11,10 +12,9 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { obtenerHorariosDia } from '../../services/horarios';
+import { obtenerDiasConServicio, obtenerHorariosDia } from '../../services/horarios';
 import { obtenerMesasActivas } from '../../services/mesas';
 import { obtenerHorasOcupadas } from '../../services/reservas';
-import { supabase } from '../../services/supabase';
 import {
   fechaATexto,
   franjaOcupada,
@@ -27,15 +27,23 @@ import {
   textoAFecha,
 } from '../../utils/fechas';
 
-export const options = {
-  headerShown: false,
-};
-
 const FONDO = require('../../assets/images/FondoReservarMesa.png');
 
+// Cuantos dias hacia adelante se puede reservar
 const DIAS_ANTICIPACION = 14;
+
 const DIAS_CORTOS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 const NOMBRE_ZONA: Record<string, string> = { terraza: 'Terraza', salon: 'Salón' };
+
+const COLORES = {
+  naranja: '#F28C28',
+  crema: '#F2EFEA',
+  oscuro: '#1A1A1A',
+  texto: '#FFFFFF',
+  textoSuave: '#C8C8C8',
+  caja: 'rgba(18, 18, 18, 0.85)',
+  borde: 'rgba(255, 255, 255, 0.2)',
+};
 
 type Mesa = { id: string; nombre: string; zona: string; capacidad: number };
 type Horario = {
@@ -48,111 +56,92 @@ type Horario = {
 type HoraOcupada = { hora_inicio: string; hora_fin: string };
 type HoraElegida = { inicio: string; duracion: number };
 
-const EMOJI_JORNADA: Record<string, string> = {
-  almuerzo: '🍽️',
-  desayuno: '☕',
-  tarde: '🥪',
-  noche: '🌙',
-};
-
 export default function DiaYHora() {
   const router = useRouter();
   const { mesaId } = useLocalSearchParams<{ mesaId: string }>();
 
   const [mesa, setMesa] = useState<Mesa | null>(null);
-  const [fecha, setFecha] = useState(fechaATexto(new Date()));
+  const [dias, setDias] = useState<Date[]>([]);
+  const [fecha, setFecha] = useState('');
   const [horarios, setHorarios] = useState<Horario[]>([]);
   const [ocupadas, setOcupadas] = useState<HoraOcupada[]>([]);
   const [horaElegida, setHoraElegida] = useState<HoraElegida | null>(null);
   const [personas, setPersonas] = useState(1);
-  const [cargandoDia, setCargandoDia] = useState(true);
+  const [cargandoDia, setCargandoDia] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [intento, setIntento] = useState(0);
-  const [diasServicio, setDiasServicio] = useState<string[] | null>(null);
 
-  // 1) Cargar la mesa elegida
+  // Al abrir la pantalla: cargar la mesa y los dias que tienen servicio
   useEffect(() => {
-    let activo = true;
-    async function cargarMesa() {
+    let ignore = false;
+
+    async function cargarInicio() {
       try {
-        const { data } = await obtenerMesasActivas();
-        const encontrada = data.find((m: Mesa) => m.id === mesaId);
-        if (!activo) return;
-        if (!encontrada) {
-          setError('No encontramos esa mesa.');
+        const resultadoMesas = await obtenerMesasActivas();
+        const resultadoDias = await obtenerDiasConServicio();
+        if (ignore) return;
+
+        const mesaEncontrada = resultadoMesas.data.find((m: Mesa) => m.id === mesaId);
+        if (!mesaEncontrada) {
+          setError('No se encontró la mesa elegida.');
           return;
         }
-        setMesa(encontrada);
-        setPersonas(Math.min(2, encontrada.capacidad));
+
+        // Solo se muestran los dias en los que el restaurante abre
+        const diasConServicio = proximosDias(DIAS_ANTICIPACION).filter((d) =>
+          resultadoDias.data.includes(nombreDia(d))
+        );
+
+        setMesa(mesaEncontrada);
+        setPersonas(Math.min(2, mesaEncontrada.capacidad));
+        setDias(diasConServicio);
+        if (diasConServicio.length > 0) {
+          setFecha(fechaATexto(diasConServicio[0]));
+        }
       } catch (e) {
-        if (activo) setError('No se pudo cargar la mesa. Revisa tu conexión.');
+        if (!ignore) setError('No se pudo cargar la información. Revisa tu conexión.');
       }
     }
-    cargarMesa();
+
+    cargarInicio();
+
+    // Si la pantalla se cierra antes de que termine, se ignora el resultado
     return () => {
-      activo = false;
+      ignore = true;
     };
   }, [mesaId, intento]);
 
-  // 1.5) Cargar qué días de semana tienen servicio y elegir día por defecto válido
+  // Cada vez que cambia el dia: cargar sus horarios y las horas ocupadas
   useEffect(() => {
-    async function cargarDiasServicio() {
-      const { data, error } = await supabase
-        .from('horarios')
-        .select('dia_semana')
-        .eq('activo', true);
-      if (error) {
-        setDiasServicio([]);
-        return;
-      }
-      const unicos = [...new Set((data ?? []).map((h: any) => h.dia_semana))];
-      setDiasServicio(unicos);
+    if (!fecha) return;
+    let ignore = false;
 
-      // Si hoy no hay servicio, saltar al primer día disponible
-      if (unicos.length > 0) {
-        const hoyTexto = fechaATexto(new Date());
-        const hoyDia = nombreDia(textoAFecha(hoyTexto));
-        if (!unicos.includes(hoyDia)) {
-          const primerDiaConServicio = proximosDias(14).find((d) =>
-            unicos.includes(nombreDia(d))
-          );
-          if (primerDiaConServicio) {
-            setFecha(fechaATexto(primerDiaConServicio));
-          }
-        }
-      }
-    }
-    cargarDiasServicio();
-  }, []);
-
-  // 2) Cargar horarios y horas ocupadas al cambiar el día
-  useEffect(() => {
-    let activo = true;
     async function cargarDia() {
       setCargandoDia(true);
       setHoraElegida(null);
       try {
         const dia = nombreDia(textoAFecha(fecha));
-        const { data: horariosDia } = await obtenerHorariosDia(dia);
-        const { data: horasOcupadas, error: errorOcupadas } = await obtenerHorasOcupadas(
-          mesaId,
-          fecha
-        );
-        if (errorOcupadas) throw errorOcupadas;
-        if (!activo) return;
-        const ordenados = [...horariosDia].sort((a: Horario, b: Horario) =>
+        const resultadoHorarios = await obtenerHorariosDia(dia);
+        const resultadoOcupadas = await obtenerHorasOcupadas(mesaId, fecha);
+        if (resultadoOcupadas.error) throw resultadoOcupadas.error;
+        if (ignore) return;
+
+        // Almuerzo primero y noche despues
+        const ordenados = [...resultadoHorarios.data].sort((a: Horario, b: Horario) =>
           a.hora_inicio.localeCompare(b.hora_inicio)
         );
         setHorarios(ordenados);
-        setOcupadas(horasOcupadas);
+        setOcupadas(resultadoOcupadas.data);
       } catch (e) {
-        if (activo) setError('No se pudieron cargar los horarios. Revisa tu conexión.');
+        if (!ignore) setError('No se pudieron cargar los horarios. Revisa tu conexión.');
       }
-      if (activo) setCargandoDia(false);
+      if (!ignore) setCargandoDia(false);
     }
+
     cargarDia();
+
     return () => {
-      activo = false;
+      ignore = true;
     };
   }, [mesaId, fecha, intento]);
 
@@ -176,217 +165,180 @@ export default function DiaYHora() {
     });
   }
 
-  const bloques = horarios.map((h) => ({
-    id: h.id,
-    titulo: h.jornada.charAt(0).toUpperCase() + h.jornada.slice(1),
-    duracion: h.duracion_slot,
-    emoji: EMOJI_JORNADA[h.jornada.toLowerCase()] ?? '🕐',
-    franjas: generarFranjas(h.hora_inicio, h.hora_fin, h.duracion_slot).map((hora) => ({
+  // Franjas de un horario, indicando si estan libres
+  function crearFranjas(horario: Horario) {
+    const horas = generarFranjas(horario.hora_inicio, horario.hora_fin, horario.duracion_slot);
+    return horas.map((hora) => ({
       hora,
-      libre: !franjaOcupada(hora, h.duracion_slot, ocupadas) && !franjaPasada(fecha, hora),
-    })),
-  }));
-  const hayLibres = bloques.some((b) => b.franjas.some((f) => f.libre));
+      libre: !franjaOcupada(hora, horario.duracion_slot, ocupadas) && !franjaPasada(fecha, hora),
+    }));
+  }
 
-  // Solo mostrar días con servicio (RF-03)
-  const todosLosDias = proximosDias(DIAS_ANTICIPACION);
-  const dias = diasServicio
-    ? todosLosDias.filter((d) => diasServicio.includes(nombreDia(d)))
-    : todosLosDias;
+  const hayLibres = horarios.some((h) => crearFranjas(h).some((f) => f.libre));
+  const hoy = fechaATexto(new Date());
 
   return (
     <ImageBackground source={FONDO} style={styles.fondo} resizeMode="cover">
-      <View style={styles.overlay} pointerEvents="none" />
+      <View style={styles.capaOscura} />
 
       <SafeAreaView style={styles.container}>
         <StatusBar style="light" />
 
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.scrollContent}
-        >
-          {/* Barra superior */}
-          <View style={styles.barraSuperior}>
-            <Pressable style={styles.botonBarra} onPress={() => router.back()}>
-              <Text style={styles.textoBarra}>‹ Volver</Text>
-            </Pressable>
-          </View>
+        <ScrollView contentContainerStyle={styles.contenido}>
+          <Pressable style={styles.botonVolver} onPress={() => router.back()}>
+            <Text style={styles.textoVolver}>Volver</Text>
+          </Pressable>
 
-          {/* Encabezado */}
           <Text style={styles.titulo}>Día y hora</Text>
-          {mesa && (
-            <View style={styles.mesaCard}>
-              <View style={styles.mesaCirculo}>
-                <Text style={styles.mesaCirculoTexto}>
-                  {(mesa.nombre?.replace(/\D/g, '') || '·').slice(0, 3)}
-                </Text>
-              </View>
-              <View style={styles.mesaTextos}>
-                <Text style={styles.mesaNombre}>{mesa.nombre}</Text>
-                <Text style={styles.mesaDetalle}>
-                  {NOMBRE_ZONA[mesa.zona] ?? mesa.zona} · hasta {mesa.capacidad} personas
-                </Text>
-              </View>
-            </View>
-          )}
 
+          {/* Error: se puede reintentar */}
           {error && (
-            <View style={styles.mensajeCaja}>
-              <View style={styles.mensajeCard}>
-                <Text style={styles.mensajeTexto}>{error}</Text>
-                <Pressable style={styles.botonClaro} onPress={reintentar}>
-                  <Text style={styles.textoBotonClaro}>Reintentar</Text>
-                </Pressable>
-              </View>
+            <View style={styles.caja}>
+              <Text style={styles.textoCentrado}>{error}</Text>
+              <Pressable style={styles.botonClaro} onPress={reintentar}>
+                <Text style={styles.textoBotonClaro}>Reintentar</Text>
+              </Pressable>
             </View>
           )}
 
-          {!error && !mesa && (
-            <ActivityIndicator size="large" color="#F28C28" style={styles.cargando} />
-          )}
+          {/* Cargando la mesa */}
+          {!error && !mesa && <ActivityIndicator size="large" color={COLORES.naranja} />}
 
           {!error && mesa && (
             <>
+              <View style={styles.caja}>
+                <Text style={styles.mesaNombre}>{mesa.nombre}</Text>
+                <Text style={styles.textoSuave}>
+                  {NOMBRE_ZONA[mesa.zona] ?? mesa.zona} - hasta {mesa.capacidad} personas
+                </Text>
+              </View>
+
               {dias.length === 0 ? (
-                <View style={styles.mensajeCard}>
-                  <Text style={styles.mensajeTexto}>
-                    No hay días de servicio disponibles próximas 2 semanas.{'\n'}Vuelve pronto.
+                <View style={styles.caja}>
+                  <Text style={styles.textoCentrado}>
+                    No hay días con servicio en las próximas dos semanas.
                   </Text>
                 </View>
               ) : (
                 <>
-                  {/* Días */}
                   <Text style={styles.etiqueta}>Elige el día</Text>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                style={styles.diasScroll}
-                contentContainerStyle={styles.filaDias}
-              >
-                {dias.map((d, i) => {
-                  const texto = fechaATexto(d);
-                  const elegido = texto === fecha;
-                  return (
+                  <FlatList
+                    data={dias}
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    keyExtractor={(d) => fechaATexto(d)}
+                    contentContainerStyle={styles.listaDias}
+                    renderItem={({ item }) => {
+                      const texto = fechaATexto(item);
+                      const elegido = texto === fecha;
+                      return (
+                        <Pressable
+                          style={[styles.dia, elegido && styles.diaElegido]}
+                          onPress={() => setFecha(texto)}
+                        >
+                          <Text style={[styles.diaNombre, elegido && styles.textoOscuro]}>
+                            {texto === hoy ? 'Hoy' : DIAS_CORTOS[item.getDay()]}
+                          </Text>
+                          <Text style={[styles.diaNumero, elegido && styles.textoOscuro]}>
+                            {item.getDate()}
+                          </Text>
+                        </Pressable>
+                      );
+                    }}
+                  />
+
+                  <Text style={styles.etiqueta}>Elige la hora</Text>
+
+                  {cargandoDia && <ActivityIndicator size="large" color={COLORES.naranja} />}
+
+                  {!cargandoDia && horarios.length === 0 && (
+                    <View style={styles.caja}>
+                      <Text style={styles.textoCentrado}>Este día no hay servicio.</Text>
+                    </View>
+                  )}
+
+                  {!cargandoDia && horarios.length > 0 && !hayLibres && (
+                    <View style={styles.caja}>
+                      <Text style={styles.textoCentrado}>
+                        No quedan horas libres este día. Prueba con otro día u otra mesa.
+                      </Text>
+                    </View>
+                  )}
+
+                  {!cargandoDia &&
+                    horarios.map((horario) => (
+                      <View key={horario.id} style={styles.caja}>
+                        <Text style={styles.jornada}>
+                          {horario.jornada.charAt(0).toUpperCase() + horario.jornada.slice(1)}
+                        </Text>
+                        <View style={styles.franjas}>
+                          {crearFranjas(horario).map((franja) => {
+                            const elegida = horaElegida?.inicio === franja.hora;
+                            return (
+                              <Pressable
+                                key={franja.hora}
+                                disabled={!franja.libre}
+                                style={[
+                                  styles.franja,
+                                  !franja.libre && styles.franjaOcupada,
+                                  elegida && styles.franjaElegida,
+                                ]}
+                                onPress={() =>
+                                  setHoraElegida({
+                                    inicio: franja.hora,
+                                    duracion: horario.duracion_slot,
+                                  })
+                                }
+                              >
+                                <Text style={[styles.franjaTexto, elegida && styles.textoOscuro]}>
+                                  {franja.hora}
+                                </Text>
+                              </Pressable>
+                            );
+                          })}
+                        </View>
+                      </View>
+                    ))}
+
+                  {!cargandoDia && horarios.length > 0 && (
+                    <Text style={styles.nota}>
+                      Las horas apagadas ya están reservadas o ya pasaron.
+                    </Text>
+                  )}
+
+                  <Text style={styles.etiqueta}>¿Cuántas personas?</Text>
+                  <View style={styles.contador}>
                     <Pressable
-                      key={texto}
-                      onPress={() => setFecha(texto)}
-                      style={[styles.dia, elegido && styles.diaElegido]}
+                      style={[styles.botonContador, personas <= 1 && styles.franjaOcupada]}
+                      disabled={personas <= 1}
+                      onPress={() => setPersonas(personas - 1)}
                     >
-                      <Text style={[styles.diaNombre, elegido && styles.textoOscuro]}>
-                        {i === 0 ? 'Hoy' : DIAS_CORTOS[d.getDay()]}
-                      </Text>
-                      <Text style={[styles.diaNumero, elegido && styles.textoOscuro]}>
-                        {d.getDate()}
-                      </Text>
+                      <Text style={styles.textoContador}>-</Text>
                     </Pressable>
-                  );
-                })}
-                  </ScrollView>
+
+                    <Text style={styles.numeroPersonas}>{personas}</Text>
+
+                    <Pressable
+                      style={[
+                        styles.botonContador,
+                        personas >= mesa.capacidad && styles.franjaOcupada,
+                      ]}
+                      disabled={personas >= mesa.capacidad}
+                      onPress={() => setPersonas(personas + 1)}
+                    >
+                      <Text style={styles.textoContador}>+</Text>
+                    </Pressable>
+                  </View>
+
+                  <Pressable
+                    style={[styles.botonContinuar, !horaElegida && styles.botonApagado]}
+                    disabled={!horaElegida}
+                    onPress={continuar}
+                  >
+                    <Text style={styles.textoContinuar}>Continuar</Text>
+                  </Pressable>
                 </>
               )}
-
-              {/* Horas */}
-              <Text style={styles.etiqueta}>Elige la hora</Text>
-
-              {cargandoDia && (
-                <ActivityIndicator size="large" color="#F28C28" style={styles.cargando} />
-              )}
-
-              {!cargandoDia && bloques.length === 0 && (
-                <View style={styles.mensajeCard}>
-                  <Text style={styles.mensajeTexto}>Este día no hay servicio.</Text>
-                </View>
-              )}
-
-              {!cargandoDia && bloques.length > 0 && !hayLibres && (
-                <View style={styles.mensajeCard}>
-                  <Text style={styles.mensajeTexto}>
-                    No quedan horas libres este día. Prueba con otro día u otra mesa.
-                  </Text>
-                </View>
-              )}
-
-              {!cargandoDia &&
-                bloques.map((bloque) => (
-                  <View key={bloque.id} style={styles.bloque}>
-                    <View style={styles.bloqueEncabezado}>
-                      <Text style={styles.bloqueEmoji}>{bloque.emoji}</Text>
-                      <Text style={styles.bloqueTitulo}>{bloque.titulo}</Text>
-                    </View>
-                    <View style={styles.franjas}>
-                      {bloque.franjas.map((f) => {
-                        const elegida = horaElegida?.inicio === f.hora;
-                        return (
-                          <Pressable
-                            key={f.hora}
-                            disabled={!f.libre}
-                            onPress={() =>
-                              setHoraElegida({
-                                inicio: f.hora,
-                                duracion: bloque.duracion,
-                              })
-                            }
-                            style={[
-                              styles.franja,
-                              !f.libre && styles.franjaApagada,
-                              elegida && styles.franjaElegida,
-                            ]}
-                          >
-                            <Text
-                              style={[
-                                styles.franjaTexto,
-                                elegida && styles.textoOscuro,
-                              ]}
-                            >
-                              {f.hora}
-                            </Text>
-                            {!f.libre && <View style={styles.franjaTachada} />}
-                          </Pressable>
-                        );
-                      })}
-                    </View>
-                  </View>
-                ))}
-
-              {!cargandoDia && bloques.length > 0 && (
-                <Text style={styles.nota}>
-                  🕓 Las horas apagadas ya están ocupadas o ya pasaron.
-                </Text>
-              )}
-
-              {/* Personas */}
-              <View style={styles.personasEncabezado}>
-                <Text style={styles.etiqueta}>¿Cuántas personas?</Text>
-                <Text style={styles.capacidadTexto}>Máx {mesa.capacidad}</Text>
-              </View>
-              <View style={styles.contador}>
-                <Pressable
-                  style={[styles.botonContador, personas <= 1 && styles.franjaApagada]}
-                  disabled={personas <= 1}
-                  onPress={() => setPersonas(personas - 1)}
-                >
-                  <Text style={styles.textoContador}>−</Text>
-                </Pressable>
-                <Text style={styles.numeroPersonas}>{personas}</Text>
-                <Pressable
-                  style={[
-                    styles.botonContador,
-                    personas >= mesa.capacidad && styles.franjaApagada,
-                  ]}
-                  disabled={personas >= mesa.capacidad}
-                  onPress={() => setPersonas(personas + 1)}
-                >
-                  <Text style={styles.textoContador}>+</Text>
-                </Pressable>
-              </View>
-
-              <Pressable
-                style={[styles.botonContinuar, !horaElegida && styles.botonDeshabilitado]}
-                onPress={continuar}
-                disabled={!horaElegida}
-              >
-                <Text style={styles.textoContinuar}>Continuar</Text>
-              </Pressable>
             </>
           )}
         </ScrollView>
@@ -396,225 +348,198 @@ export default function DiaYHora() {
 }
 
 const styles = StyleSheet.create({
-  fondo: { flex: 1, backgroundColor: '#0d2b3e' },
-  overlay: {
+  fondo: {
+    flex: 1,
+    backgroundColor: '#000000',
+  },
+  capaOscura: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.42)',
+    backgroundColor: 'rgba(0, 0, 0, 0.55)',
   },
-  container: { flex: 1 },
-  scrollContent: {
-    flexGrow: 1,
-    paddingHorizontal: 20,
-    paddingTop: 16,
+  container: {
+    flex: 1,
+  },
+  contenido: {
+    padding: 20,
     paddingBottom: 40,
   },
-  cargando: { marginVertical: 28 },
-  barraSuperior: { marginBottom: 14 },
-  botonBarra: {
+  botonVolver: {
     alignSelf: 'flex-start',
-    paddingHorizontal: 14,
     paddingVertical: 8,
+    paddingHorizontal: 14,
     borderRadius: 20,
-    backgroundColor: 'rgba(0,0,0,0.45)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.18)',
+    borderColor: COLORES.borde,
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    marginBottom: 14,
   },
-  textoBarra: { color: '#FFFFFF', fontSize: 15, fontWeight: '600' },
-
-  /* ---------- Encabezado ---------- */
+  textoVolver: {
+    color: COLORES.texto,
+    fontSize: 15,
+    fontWeight: '600',
+  },
   titulo: {
-    fontSize: 34,
-    fontWeight: '800',
-    color: '#FFFFFF',
-    letterSpacing: 0.3,
-    textShadowColor: '#000',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 3,
+    color: COLORES.texto,
+    fontSize: 32,
+    fontWeight: 'bold',
+    marginBottom: 12,
   },
-
-  mesaCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(18,18,18,0.82)',
-    borderRadius: 22,
-    padding: 16,
-    marginTop: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.16)',
-  },
-  mesaCirculo: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: '#F28C28',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 14,
-  },
-  mesaCirculoTexto: { color: '#FFFFFF', fontWeight: '800', fontSize: 22 },
-  mesaTextos: { flex: 1 },
-  mesaNombre: { color: '#FFFFFF', fontSize: 20, fontWeight: '800' },
-  mesaDetalle: { color: '#C8C8C8', fontSize: 14, marginTop: 4 },
-
-  /* ---------- Etiquetas ---------- */
   etiqueta: {
-    color: '#FFFFFF',
+    color: COLORES.texto,
     fontSize: 18,
-    fontWeight: '800',
-    marginTop: 26,
+    fontWeight: 'bold',
+    marginTop: 22,
     marginBottom: 10,
-    textShadowColor: '#000',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 2,
   },
-
-  /* ---------- Días ---------- */
-  diasScroll: { marginBottom: 6 },
-  filaDias: { alignItems: 'center', gap: 8, paddingRight: 8, paddingVertical: 4 },
+  caja: {
+    backgroundColor: COLORES.caja,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: COLORES.borde,
+    padding: 16,
+    marginBottom: 12,
+  },
+  mesaNombre: {
+    color: COLORES.texto,
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  textoSuave: {
+    color: COLORES.textoSuave,
+    fontSize: 14,
+    marginTop: 4,
+  },
+  textoCentrado: {
+    color: COLORES.texto,
+    fontSize: 16,
+    textAlign: 'center',
+  },
+  textoOscuro: {
+    color: COLORES.oscuro,
+  },
+  listaDias: {
+    gap: 8,
+  },
   dia: {
     width: 60,
     height: 66,
-    borderRadius: 18,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: COLORES.borde,
+    backgroundColor: COLORES.caja,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(18,18,18,0.78)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.18)',
   },
   diaElegido: {
-    backgroundColor: '#F2EFEA',
-    borderColor: '#F28C28',
+    backgroundColor: COLORES.crema,
+    borderColor: COLORES.naranja,
     borderWidth: 2,
-    shadowColor: '#F28C28',
-    shadowOpacity: 0.45,
-    shadowRadius: 8,
   },
-  diaNombre: { color: '#C8C8C8', fontSize: 12, fontWeight: '700' },
-  diaNumero: { color: '#FFF', fontSize: 20, fontWeight: '800', marginTop: 2 },
-  textoOscuro: { color: '#1A1A1A' },
-
-  /* ---------- Bloques por jornada ---------- */
-  bloque: {
-    marginBottom: 14,
-    padding: 16,
-    borderRadius: 22,
-    backgroundColor: 'rgba(18,18,18,0.82)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.14)',
+  diaNombre: {
+    color: COLORES.textoSuave,
+    fontSize: 12,
+    fontWeight: '600',
   },
-  bloqueEncabezado: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 },
-  bloqueEmoji: { fontSize: 22 },
-  bloqueTitulo: {
-    color: '#FFFFFF',
+  diaNumero: {
+    color: COLORES.texto,
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  jornada: {
+    color: COLORES.texto,
     fontSize: 17,
-    fontWeight: '800',
-    textShadowColor: '#000',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 2,
+    fontWeight: 'bold',
+    marginBottom: 10,
   },
-  franjas: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  franjas: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
   franja: {
     minWidth: 76,
-    paddingHorizontal: 16,
     paddingVertical: 12,
-    borderRadius: 22,
-    backgroundColor: 'rgba(18,18,18,0.85)',
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.35)',
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: COLORES.borde,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
     alignItems: 'center',
-    justifyContent: 'center',
   },
   franjaElegida: {
-    backgroundColor: '#F28C28',
-    borderColor: '#FFFFFF',
-    shadowColor: '#F28C28',
-    shadowOpacity: 0.55,
-    shadowRadius: 10,
+    backgroundColor: COLORES.naranja,
+    borderColor: COLORES.texto,
   },
-  franjaApagada: { opacity: 0.4 },
-  franjaTachada: {
-    position: 'absolute',
-    left: 12,
-    right: 12,
-    top: '50%',
-    height: 2,
-    backgroundColor: 'rgba(255,255,255,0.45)',
-    transform: [{ translateY: -1 }],
+  franjaOcupada: {
+    opacity: 0.3,
   },
-  franjaTexto: { color: '#FFFFFF', fontSize: 16, fontWeight: '800' },
+  franjaTexto: {
+    color: COLORES.texto,
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
   nota: {
-    color: '#C8C8C8',
+    color: COLORES.textoSuave,
     fontSize: 13,
-    marginTop: 4,
-    marginBottom: 4,
   },
-
-  /* ---------- Personas ---------- */
-  personasEncabezado: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  capacidadTexto: { color: '#B5B5B5', fontSize: 13, fontWeight: '600', marginTop: 22 },
   contador: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 28,
-    marginVertical: 14,
+    marginBottom: 10,
   },
   botonContador: {
-    width: 56,
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    backgroundColor: COLORES.crema,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  textoContador: {
+    color: COLORES.oscuro,
+    fontSize: 26,
+    fontWeight: 'bold',
+  },
+  numeroPersonas: {
+    color: COLORES.texto,
+    fontSize: 30,
+    fontWeight: 'bold',
+    minWidth: 36,
+    textAlign: 'center',
+  },
+  botonContinuar: {
+    backgroundColor: COLORES.crema,
     height: 56,
     borderRadius: 28,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#F2EFEA',
-    borderWidth: 1,
-    borderColor: '#F28C28',
-  },
-  textoContador: { color: '#1A1A1A', fontSize: 26, fontWeight: '800' },
-  numeroPersonas: { color: '#FFF', fontSize: 30, fontWeight: '800', minWidth: 36, textAlign: 'center' },
-
-  /* ---------- Botones / mensajes ---------- */
-  botonContinuar: {
-    backgroundColor: '#F2EFEA',
-    height: 58,
-    borderRadius: 29,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 10,
-    borderWidth: 2,
-    borderColor: '#F28C28',
-  },
-  botonDeshabilitado: { opacity: 0.35 },
-  textoContinuar: {
-    color: '#1A1A1A',
-    fontSize: 18,
-    fontWeight: '800',
-    letterSpacing: 0.5,
-  },
-  mensajeCaja: { marginVertical: 12 },
-  mensajeCard: {
-    backgroundColor: 'rgba(18,18,18,0.82)',
-    borderRadius: 22,
-    padding: 18,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.14)',
-    marginVertical: 12,
-  },
-  mensajeTexto: { color: '#FFF', fontSize: 16, textAlign: 'center' },
-  botonClaro: {
-    backgroundColor: '#F2EFEA',
-    paddingHorizontal: 28,
-    height: 46,
-    borderRadius: 23,
-    justifyContent: 'center',
-    alignSelf: 'center',
     marginTop: 12,
   },
-  textoBotonClaro: { color: '#1A1A1A', fontSize: 15, fontWeight: '800' },
+  botonApagado: {
+    opacity: 0.35,
+  },
+  textoContinuar: {
+    color: COLORES.oscuro,
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  botonClaro: {
+    alignSelf: 'center',
+    backgroundColor: COLORES.crema,
+    paddingVertical: 12,
+    paddingHorizontal: 26,
+    borderRadius: 22,
+    marginTop: 14,
+  },
+  textoBotonClaro: {
+    color: COLORES.oscuro,
+    fontSize: 15,
+    fontWeight: 'bold',
+  },
 });
