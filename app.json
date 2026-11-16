@@ -8,9 +8,12 @@
     "scheme": "konysreservasapp",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "icon": "./assets/expo.icon",
+      "bundleIdentifier": "com.juanmedinao.konysreservas"
     },
     "android": {
+      "package": "com.juanmedinao.konysreservas",
+      "versionCode": 1,
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -38,6 +41,13 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "28f05fd6-52c1-4463-b3df-820b8fdeb173"
+      }
+    },
+    "owner": "juanmedinao3"
   }
 }
