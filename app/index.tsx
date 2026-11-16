@@ -112,7 +112,10 @@ export default function Inicio() {
               </Pressable>
             </View>
 
-            
+            <Pressable style={styles.ubicacionChip} onPress={() => router.push('/contacto')}>
+              <Text style={styles.ubicacionTexto}>Ubicación</Text>
+            </Pressable>
+
             {error && <Text style={styles.estadoError}>Error: {error}</Text>}
 
             <View style={styles.hint} pointerEvents="none">
@@ -216,6 +219,21 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '800',
     textAlign: 'center',
+  },
+  ubicacionChip: {
+    marginTop: 14,
+    paddingHorizontal: 26,
+    paddingVertical: 10,
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: BORDE,
+    backgroundColor: CAJA,
+  },
+  ubicacionTexto: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+    letterSpacing: 0.5,
   },
   estadoError: {
     marginTop: 16,
