@@ -272,6 +272,19 @@ export default function Admin() {
     );
   }
 
+  async function marcarCompletada(id: string) {
+    const { error } = await supabase
+      .from('reservas')
+      .update({ estado: 'completada' })
+      .eq('id', id);
+
+    if (error) {
+      Alert.alert('Error', 'No se pudo marcar la reserva como completada.');
+      return;
+    }
+    setIntento((i) => i + 1);
+  }
+
   async function cancelar(id: string) {
     const { data, error } = await supabase
       .from('reservas')
@@ -488,7 +501,33 @@ export default function Admin() {
   }
 
   async function eliminarMesa(mesa: any) {
-    Alert.alert('Eliminar mesa', `¿Eliminar "${mesa.nombre}"? Las reservas se conservarán.`, [
+    // Verificar si tiene reservas pendientes (confirmadas futuras o de hoy) antes de borrar
+    const hoy = fechaATexto(new Date());
+    const { data: reservasMesa, error: errorConsulta } = await supabase
+      .from('reservas')
+      .select('id, estado, fecha')
+      .eq('mesa_id', mesa.id)
+      .eq('estado', 'confirmada')
+      .gte('fecha', hoy);
+
+    if (errorConsulta) {
+      Alert.alert('Error', 'No se pudieron verificar las reservas de la mesa.');
+      return;
+    }
+
+    if (reservasMesa && reservasMesa.length > 0) {
+      Alert.alert(
+        'No se puede eliminar',
+        `"${mesa.nombre}" tiene ${reservasMesa.length} reserva(s) confirmada(s). Desactivala en su lugar.`,
+        [
+          { text: 'Entendido', style: 'cancel' },
+          { text: 'Desactivar', onPress: () => alternarActivaMesa(mesa) },
+        ]
+      );
+      return;
+    }
+
+    Alert.alert('Eliminar mesa', `¿Eliminar "${mesa.nombre}"? Esta acción no se puede deshacer.`, [
       { text: 'Cancelar', style: 'cancel' },
       {
         text: 'Eliminar',
@@ -853,12 +892,14 @@ export default function Admin() {
                     !errorLista &&
                     reservas.map((r) => {
                       const cancelada = r.estado === 'cancelada';
+                      const completada = r.estado === 'completada';
+                      const activa = !cancelada && !completada;
                       return (
-                        <View key={r.id} style={[styles.tarjetaReserva, cancelada && styles.tarjetaCancelada]}>
+                        <View key={r.id} style={[styles.tarjetaReserva, cancelada && styles.tarjetaCancelada, completada && styles.tarjetaCompletada]}>
                           <View
                             style={[
                               styles.acentoLateral,
-                              cancelada ? styles.acentoCancelar : styles.acentoOk,
+                              cancelada ? styles.acentoCancelar : completada ? styles.acentoCompletada : styles.acentoOk,
                             ]}
                           />
                           <View style={styles.tarjetaContenido}>
@@ -869,9 +910,9 @@ export default function Admin() {
                                   {r.hora_inicio.slice(0, 5)} – {r.hora_fin.slice(0, 5)}
                                 </Text>
                               </View>
-                              <View style={[styles.estadoPill, cancelada && styles.estadoCancelada]}>
-                                <Text style={[styles.estadoPillTexto, cancelada && styles.estadoCanceladaTexto]}>
-                                  {cancelada ? 'CANCELADA' : 'CONFIRMADA'}
+                              <View style={[styles.estadoPill, cancelada ? styles.estadoCancelada : completada ? styles.estadoCompletadaPill : null]}>
+                                <Text style={[styles.estadoPillTexto, cancelada ? styles.estadoCanceladaTexto : completada ? styles.estadoCompletadaPillTexto : null]}>
+                                  {cancelada ? 'CANCELADA' : completada ? 'COMPLETADA' : 'CONFIRMADA'}
                                 </Text>
                               </View>
                             </View>
@@ -889,11 +930,17 @@ export default function Admin() {
                               <Text style={styles.detalle}>{r.cliente_contacto ?? '—'}</Text>
                             </View>
 
-                            {puedeCancelar && !cancelada && (
-                              <Pressable style={styles.botonCancelar} onPress={() => pedirCancelacion(r)}>
-                                <Ionicons name="close-circle-outline" size={18} color="#FF9A94" />
-                                <Text style={styles.textoCancelar}>Cancelar reserva</Text>
-                              </Pressable>
+                            {activa && puedeCancelar && (
+                              <View style={styles.accionesReserva}>
+                                <Pressable style={styles.botonCompletar} onPress={() => marcarCompletada(r.id)}>
+                                  <Ionicons name="checkmark-circle-outline" size={18} color="#7EE2A5" />
+                                  <Text style={styles.textoCompletar}>Completada</Text>
+                                </Pressable>
+                                <Pressable style={styles.botonCancelar} onPress={() => pedirCancelacion(r)}>
+                                  <Ionicons name="close-circle-outline" size={18} color="#FF9A94" />
+                                  <Text style={styles.textoCancelar}>Cancelar</Text>
+                                </Pressable>
+                              </View>
                             )}
                           </View>
                         </View>
@@ -1737,6 +1784,27 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,90,90,0.4)',
   },
   estadoCanceladaTexto: { color: '#FF8A8A' },
+  tarjetaCompletada: { opacity: 0.7 },
+  acentoCompletada: { backgroundColor: COLORES.verde },
+  estadoCompletadaPill: {
+    backgroundColor: 'rgba(62,213,152,0.16)',
+    borderColor: 'rgba(62,213,152,0.5)',
+  },
+  estadoCompletadaPillTexto: { color: COLORES.verde },
+  accionesReserva: { flexDirection: 'row', gap: 10, marginTop: 10 },
+  botonCompletar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    alignSelf: 'flex-start',
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 1.5,
+    borderColor: 'rgba(62,213,152,0.5)',
+    backgroundColor: 'rgba(62,213,152,0.12)',
+    paddingHorizontal: 14,
+  },
+  textoCompletar: { color: '#7EE2A5', fontSize: 13, fontWeight: '800' },
   cliente: { color: COLORES.texto, fontSize: 18, fontWeight: '800', marginBottom: 8 },
   detalleFila: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
   detalle: { color: COLORES.textoSuave, fontSize: 14 },
