@@ -90,6 +90,8 @@ export default function Admin() {
   const [cargandoLista, setCargandoLista] = useState(false);
   const [errorLista, setErrorLista] = useState<string | null>(null);
   const [intento, setIntento] = useState(0);
+  const [filtroMesa, setFiltroMesa] = useState<string | null>(null);
+  const [mesasFiltro, setMesasFiltro] = useState<any[]>([]);
 
   // Carta
   const [platos, setPlatos] = useState<any[]>([]);
@@ -219,11 +221,13 @@ export default function Admin() {
     async function cargarReservas() {
       setCargandoLista(true);
       setErrorLista(null);
-      const { data, error } = await supabase
+      let query = supabase
         .from('reservas')
         .select('id, cliente_nombre, cliente_contacto, num_personas, hora_inicio, hora_fin, estado, mesas(nombre, zona)')
         .eq('fecha', fecha)
         .order('hora_inicio', { ascending: true });
+      if (filtroMesa) query = query.eq('mesa_id', filtroMesa);
+      const { data, error } = await query;
 
       if (!activo) return;
       if (error) {
@@ -238,7 +242,27 @@ export default function Admin() {
     return () => {
       activo = false;
     };
-  }, [rol, fecha, intento]);
+  }, [rol, fecha, intento, filtroMesa]);
+
+  // Cargar mesas activas para el filtro
+  useEffect(() => {
+    if (!rol) return;
+    let activo = true;
+
+    async function cargarMesasFiltro() {
+      const { data } = await supabase
+        .from('mesas')
+        .select('id, nombre, zona, capacidad')
+        .eq('activa', true)
+        .order('nombre');
+      if (activo) setMesasFiltro(data ?? []);
+    }
+
+    cargarMesasFiltro();
+    return () => {
+      activo = false;
+    };
+  }, [rol]);
 
   function pedirCancelacion(reserva: any) {
     Alert.alert(
@@ -772,6 +796,38 @@ export default function Admin() {
                       );
                     })}
                   </ScrollView>
+
+                  {/* Filtro por mesa */}
+                  {mesasFiltro.length > 0 && (
+                    <ScrollView
+                      horizontal
+                      showsHorizontalScrollIndicator={false}
+                      style={styles.filtroMesaScroll}
+                      contentContainerStyle={styles.filtroMesaContenido}
+                    >
+                      <Pressable
+                        style={[styles.chipMesa, !filtroMesa && styles.chipMesaActiva]}
+                        onPress={() => setFiltroMesa(null)}
+                      >
+                        <Ionicons name="grid-outline" size={14} color={!filtroMesa ? '#1A1A1A' : COLORES.textoSuave} />
+                        <Text style={[styles.chipMesaTexto, !filtroMesa && styles.chipMesaTextoActivo]}>Todas</Text>
+                      </Pressable>
+                      {mesasFiltro.map((m) => {
+                        const elegido = filtroMesa === m.id;
+                        return (
+                          <Pressable
+                            key={m.id}
+                            style={[styles.chipMesa, elegido && styles.chipMesaActiva]}
+                            onPress={() => setFiltroMesa(elegido ? null : m.id)}
+                          >
+                            <Text style={[styles.chipMesaTexto, elegido && styles.chipMesaTextoActivo]}>
+                              {m.nombre}
+                            </Text>
+                          </Pressable>
+                        );
+                      })}
+                    </ScrollView>
+                  )}
 
                   {cargandoLista && <ActivityIndicator size="large" color={COLORES.ambar} style={styles.cargando} />}
 
@@ -1604,6 +1660,26 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   diasScroll: { marginBottom: 14 },
+  filtroMesaScroll: { marginBottom: 14 },
+  filtroMesaContenido: { gap: 8, paddingVertical: 2 },
+  chipMesa: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.07)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+    paddingHorizontal: 12,
+  },
+  chipMesaActiva: {
+    backgroundColor: COLORES.ambar,
+    borderColor: '#FFFFFF',
+    borderWidth: 2,
+  },
+  chipMesaTexto: { color: COLORES.textoSuave, fontSize: 13, fontWeight: '700' },
+  chipMesaTextoActivo: { color: '#1A1A1A' },
   filaDias: { gap: 8, paddingRight: 4 },
   dia: {
     width: 58,
@@ -2029,4 +2105,4 @@ const styles = StyleSheet.create({
 
   /* ========== Utilidades ========== */
   cargando: { marginVertical: 30 },
-});
+ });

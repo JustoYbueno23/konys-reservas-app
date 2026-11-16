@@ -14,6 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { obtenerHorariosDia } from '../../services/horarios';
 import { obtenerMesasActivas } from '../../services/mesas';
 import { obtenerHorasOcupadas } from '../../services/reservas';
+import { supabase } from '../../services/supabase';
 import {
   fechaATexto,
   franjaOcupada,
@@ -67,6 +68,7 @@ export default function DiaYHora() {
   const [cargandoDia, setCargandoDia] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [intento, setIntento] = useState(0);
+  const [diasServicio, setDiasServicio] = useState<string[] | null>(null);
 
   // 1) Cargar la mesa elegida
   useEffect(() => {
@@ -91,6 +93,37 @@ export default function DiaYHora() {
       activo = false;
     };
   }, [mesaId, intento]);
+
+  // 1.5) Cargar qué días de semana tienen servicio y elegir día por defecto válido
+  useEffect(() => {
+    async function cargarDiasServicio() {
+      const { data, error } = await supabase
+        .from('horarios')
+        .select('dia_semana')
+        .eq('activo', true);
+      if (error) {
+        setDiasServicio([]);
+        return;
+      }
+      const unicos = [...new Set((data ?? []).map((h: any) => h.dia_semana))];
+      setDiasServicio(unicos);
+
+      // Si hoy no hay servicio, saltar al primer día disponible
+      if (unicos.length > 0) {
+        const hoyTexto = fechaATexto(new Date());
+        const hoyDia = nombreDia(textoAFecha(hoyTexto));
+        if (!unicos.includes(hoyDia)) {
+          const primerDiaConServicio = proximosDias(14).find((d) =>
+            unicos.includes(nombreDia(d))
+          );
+          if (primerDiaConServicio) {
+            setFecha(fechaATexto(primerDiaConServicio));
+          }
+        }
+      }
+    }
+    cargarDiasServicio();
+  }, []);
 
   // 2) Cargar horarios y horas ocupadas al cambiar el día
   useEffect(() => {
@@ -155,7 +188,11 @@ export default function DiaYHora() {
   }));
   const hayLibres = bloques.some((b) => b.franjas.some((f) => f.libre));
 
-  const dias = proximosDias(DIAS_ANTICIPACION);
+  // Solo mostrar días con servicio (RF-03)
+  const todosLosDias = proximosDias(DIAS_ANTICIPACION);
+  const dias = diasServicio
+    ? todosLosDias.filter((d) => diasServicio.includes(nombreDia(d)))
+    : todosLosDias;
 
   return (
     <ImageBackground source={FONDO} style={styles.fondo} resizeMode="cover">
@@ -210,8 +247,16 @@ export default function DiaYHora() {
 
           {!error && mesa && (
             <>
-              {/* Días */}
-              <Text style={styles.etiqueta}>Elige el día</Text>
+              {dias.length === 0 ? (
+                <View style={styles.mensajeCard}>
+                  <Text style={styles.mensajeTexto}>
+                    No hay días de servicio disponibles próximas 2 semanas.{'\n'}Vuelve pronto.
+                  </Text>
+                </View>
+              ) : (
+                <>
+                  {/* Días */}
+                  <Text style={styles.etiqueta}>Elige el día</Text>
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
@@ -236,7 +281,9 @@ export default function DiaYHora() {
                     </Pressable>
                   );
                 })}
-              </ScrollView>
+                  </ScrollView>
+                </>
+              )}
 
               {/* Horas */}
               <Text style={styles.etiqueta}>Elige la hora</Text>

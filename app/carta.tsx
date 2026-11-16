@@ -131,6 +131,7 @@ export default function Carta() {
       const { data, error: err } = await supabase
         .from('platos')
         .select('*')
+        .eq('disponible', true)
         .order('categoria')
         .order('precio');
 
