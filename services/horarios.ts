@@ -1,5 +1,9 @@
 import { supabase } from './supabase';
 
+// Pedidos de horarios a Supabase
+// La tabla horarios guarda las jornadas (almuerzo y noche) de cada día de la semana
+// Documentación: https://supabase.com/docs/reference/javascript/select
+
 export async function obtenerHorariosDia(diaSemana: string) {
     const { data, error } = await supabase
         .from('horarios')
