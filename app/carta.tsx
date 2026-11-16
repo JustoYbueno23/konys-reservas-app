@@ -1,3 +1,11 @@
+﻿// -------------------------------------------------------------
+// PANTALLA: Carta
+// Dos vistas: la lista de apartados (Recomendados, Pizzas...)
+// y la lista de platos del apartado elegido.
+// Solo se muestran los platos disponibles en la base de datos.
+// FlatList y SectionList: https://reactnative.dev/docs/flatlist
+// -------------------------------------------------------------
+import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useMemo, useState } from 'react';
 import {
@@ -11,11 +19,9 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { supabase } from '../services/supabase';
-
-export const options = {
-  headerShown: false,
-};
+import { obtenerPlatosDisponibles } from '../services/platos';
+import { imagenPlato } from '../services/platos-imagenes';
+import { formatoPrecio } from '../utils/formato';
 
 const FONDO = require('../assets/images/FondoReservarMesa.png');
 
@@ -28,81 +34,24 @@ const fillStyle = {
   bottom: 0,
 } as const;
 
+// Apartados de la carta. La clave "id" es la misma categoria de la base de datos
 const CATEGORIAS = [
-  { id: 'recomendados', label: 'Recomendados', emoji: '⭐', imagen: require('../assets/images/categorias/recomendados.jpg') },
-  { id: 'entradas', label: 'Entradas', emoji: '🥟', imagen: require('../assets/images/categorias/entradas.jpg') },
-  { id: 'menu-infantil', label: 'Menú Infantil', emoji: '👶', imagen: require('../assets/images/categorias/menu-infantil.jpg') },
-  { id: 'pizzas', label: 'Pizzas', emoji: '🍕', imagen: require('../assets/images/categorias/pizzas.jpg') },
-  { id: 'desgranados', label: 'Desgranados', emoji: '🥘', imagen: require('../assets/images/categorias/desgranados.jpg') },
-  { id: 'papas', label: 'Papas Ikónicas', emoji: '🍟', imagen: require('../assets/images/categorias/papas.jpg') },
-  { id: 'lasana', label: 'Lasaña', emoji: '🍝', imagen: require('../assets/images/categorias/lasana.jpg') },
-  { id: 'granizados', label: 'Granizados', emoji: '🧊', imagen: require('../assets/images/categorias/granizados.jpg') },
-  { id: 'sodas', label: 'Sodas', emoji: '🧃', imagen: require('../assets/images/categorias/sodas.jpg') },
-  { id: 'bebidas', label: 'Bebidas Frías', emoji: '🥤', imagen: require('../assets/images/categorias/bebidas.jpg') },
-  { id: 'cerveza', label: 'Cerveza', emoji: '🍺', imagen: require('../assets/images/categorias/cerveza.jpg') },
-  { id: 'cocteles', label: 'Cócteles', emoji: '🍹', imagen: require('../assets/images/categorias/cocteles.jpg') },
-  { id: 'postres', label: 'Postres', emoji: '🍨', imagen: require('../assets/images/categorias/postres.jpg') },
-  { id: 'almuerzos', label: 'Menú Almuerzos', emoji: '🍝', imagen: require('../assets/images/categorias/almuerzos.jpg') },
-  { id: 'congelados', label: 'Congelados', emoji: '❄️', imagen: require('../assets/images/categorias/congelados.jpg') },
+  { id: 'recomendados', label: 'Recomendados', imagen: require('../assets/images/categorias/recomendados.jpg') },
+  { id: 'entradas', label: 'Entradas', imagen: require('../assets/images/categorias/entradas.jpg') },
+  { id: 'menu-infantil', label: 'Menú Infantil', imagen: require('../assets/images/categorias/menu-infantil.jpg') },
+  { id: 'pizzas', label: 'Pizzas', imagen: require('../assets/images/categorias/pizzas.jpg') },
+  { id: 'desgranados', label: 'Desgranados', imagen: require('../assets/images/categorias/desgranados.jpg') },
+  { id: 'papas', label: 'Papas Ikónicas', imagen: require('../assets/images/categorias/papas.jpg') },
+  { id: 'lasana', label: 'Lasaña', imagen: require('../assets/images/categorias/lasana.jpg') },
+  { id: 'granizados', label: 'Granizados', imagen: require('../assets/images/categorias/granizados.jpg') },
+  { id: 'sodas', label: 'Sodas', imagen: require('../assets/images/categorias/sodas.jpg') },
+  { id: 'bebidas', label: 'Bebidas Frías', imagen: require('../assets/images/categorias/bebidas.jpg') },
+  { id: 'cerveza', label: 'Cerveza', imagen: require('../assets/images/categorias/cerveza.jpg') },
+  { id: 'cocteles', label: 'Cócteles', imagen: require('../assets/images/categorias/cocteles.jpg') },
+  { id: 'postres', label: 'Postres', imagen: require('../assets/images/categorias/postres.jpg') },
+  { id: 'almuerzos', label: 'Menú Almuerzos', imagen: require('../assets/images/categorias/almuerzos.jpg') },
+  { id: 'congelados', label: 'Congelados', imagen: require('../assets/images/categorias/congelados.jpg') },
 ];
-
-const PLATO_IMG: Record<string, any> = {
-  'Entrada mini Konitos': require('../assets/images/platos/entrada-mini-konitos.jpg'),
-  'Nachos Enchulados': require('../assets/images/platos/nachos-enchulados.jpg'),
-  'Salchipuplitos': require('../assets/images/platos/salchipuplitos.jpg'),
-  'Chezki Chicken': require('../assets/images/platos/chezki-chicken.jpg'),
-  'Bukara Ganadora Pizza Master': require('../assets/images/platos/bukara-ganadora.jpg'),
-  'Konys Dulcinea': require('../assets/images/platos/konys-dulcinea.jpg'),
-  'Colombianisma': require('../assets/images/platos/colombianisima.jpg'),
-  'Lasagna': require('../assets/images/platos/lasagna.jpg'),
-  'Ikónica': require('../assets/images/platos/iconica.jpg'),
-  'Carbonara': require('../assets/images/platos/carbonara.jpg'),
-  'Hawaiiana': require('../assets/images/platos/hawaiana.jpg'),
-  'Mexicana': require('../assets/images/platos/mexicana.jpg'),
-  'Chicken': require('../assets/images/platos/chicken.jpg'),
-  'Veggie': require('../assets/images/platos/veggie.jpg'),
-  'BBQ': require('../assets/images/platos/bbq.jpg'),
-  'Teriyork': require('../assets/images/platos/teriyork.jpg'),
-  'Especial': require('../assets/images/platos/especial.jpg'),
-  'Carnes (Auténtica Pepperoni)': require('../assets/images/platos/carnes.jpg'),
-  'Mar & Tierra': require('../assets/images/platos/mar-y-tierra.jpg'),
-  'Marinera': require('../assets/images/platos/marinera.jpg'),
-  'Italianisma': require('../assets/images/platos/italianisma.jpg'),
-  'Bonciola': require('../assets/images/platos/bonciola.jpg'),
-  'Combo Amigos X4': require('../assets/images/platos/combo-amigos-x4.jpg'),
-  'Combo Parche X6': require('../assets/images/platos/combo-parche-x6.jpg'),
-  'Desgranado de Carne': require('../assets/images/platos/desgranado-de-carne.jpg'),
-  'Desgranado Pollo': require('../assets/images/platos/desgranado-pollo.jpg'),
-  'Papas Locas': require('../assets/images/platos/papas-locas.jpg'),
-  'Chicken Fries Mini': require('../assets/images/platos/chicken-fries-mini.jpg'),
-  'Chodrino Mini': require('../assets/images/platos/chodofries-mini.jpg'),
-  'Salchichfries Mini': require('../assets/images/platos/salchichfries-mini.jpg'),
-  'Porción de Papas': require('../assets/images/platos/porcion-de-papas.jpg'),
-  'Lasaña (Sabor del Día)': require('../assets/images/platos/lasana.jpg'),
-  'MaracuMango': require('../assets/images/platos/maracumango.jpg'),
-  'Soda Frutos Rojos': require('../assets/images/platos/soda-frutos-rojos.jpg'),
-};
-
-const EMOJI_POR_CATEGORIA: Record<string, string> = {
-  entradas: '🥟',
-  'menu-infantil': '👶',
-  pizzas: '🍕',
-  desgranados: '🥘',
-  papas: '🍟',
-  lasana: '🍝',
-  granizados: '🧊',
-  sodas: '🧃',
-  bebidas: '🥤',
-  cerveza: '🍺',
-  cocteles: '🍹',
-  postres: '🍨',
-  almuerzos: '🍝',
-  congelados: '❄️',
-};
-
-function formatearPrecio(precio: number) {
-  return '$ ' + String(precio).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-}
 
 type Plato = {
   id: number;
@@ -125,15 +74,11 @@ export default function Carta() {
   useEffect(() => {
     let activo = true;
 
+    // Si la pantalla se cierra antes de terminar, el resultado se ignora
     async function cargar() {
       setCargando(true);
       setError(null);
-      const { data, error: err } = await supabase
-        .from('platos')
-        .select('*')
-        .eq('disponible', true)
-        .order('categoria')
-        .order('precio');
+      const { data, error: err } = await obtenerPlatosDisponibles();
 
       if (!activo) return;
       if (err) {
@@ -202,7 +147,7 @@ export default function Carta() {
 
           <View style={styles.encabezadoLista}>
             <Pressable style={styles.botonAtras} onPress={() => setSeleccion(null)}>
-              <Text style={styles.atrasTexto}>‹ Volver</Text>
+              <Text style={styles.atrasTexto}>Volver</Text>
             </Pressable>
             <View>
               <Text style={styles.tituloLista}>{categoriaActual.label}</Text>
@@ -218,7 +163,7 @@ export default function Carta() {
             contentContainerStyle={styles.grid}
             ListEmptyComponent={<Text style={styles.vacio}>No hay productos en este apartado.</Text>}
             renderItem={({ item }) => {
-              const imagen = PLATO_IMG[item.nombre];
+              const imagen = imagenPlato(item.nombre);
               const agotado = !item.disponible;
               return (
                 <View style={[styles.carta, agotado && styles.cartaAgotada]}>
@@ -231,9 +176,8 @@ export default function Carta() {
                     />
                   ) : (
                     <View style={styles.cartaIconoFondo}>
-                      <Text style={styles.cartaIcono}>
-                        {EMOJI_POR_CATEGORIA[item.categoria] ?? '🍽️'}
-                      </Text>
+                      {/* Icono de reserva si el plato no tiene foto */}
+                      <Ionicons name="restaurant-outline" size={44} color="#F28C28" />
                     </View>
                   )}
 
@@ -250,8 +194,10 @@ export default function Carta() {
                       {item.nombre}
                     </Text>
                     <View style={styles.filaInf}>
-                      <Text style={styles.precio}>{formatearPrecio(item.precio)}</Text>
-                      {item.recomendado && <Text style={styles.chipRec}>⭐</Text>}
+                      <Text style={styles.precio}>{formatoPrecio(item.precio)}</Text>
+                      {item.recomendado && (
+                        <Ionicons name="star" size={16} color="#F28C28" />
+                      )}
                     </View>
                   </View>
                 </View>
@@ -460,9 +406,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: '#241E17',
   },
-  cartaIcono: {
-    fontSize: 56,
-  },
   cartaGradiente: {
     position: 'absolute',
     top: '45%',
@@ -494,9 +437,6 @@ const styles = StyleSheet.create({
     color: '#F2EFEA',
     fontSize: 15,
     fontWeight: '800',
-  },
-  chipRec: {
-    fontSize: 15,
   },
   badgeAgotado: {
     position: 'absolute',
