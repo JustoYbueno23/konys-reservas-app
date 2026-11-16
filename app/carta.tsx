@@ -16,7 +16,7 @@ import { obtenerPlatosDisponibles } from '../services/platos';
 import { imagenPlato } from '../services/platos-imagenes';
 import { formatoPrecio } from '../utils/formato';
 
-const FONDO = require('../assets/images/FondoReservarMesa.png');
+const FONDO = require('../assets/images/fondos/pizzas.webp');
 
 const fillStyle = {
   position: 'absolute',

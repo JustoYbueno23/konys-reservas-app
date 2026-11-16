@@ -19,7 +19,7 @@ import { obtenerMesasActivas } from '../../services/mesas';
 import { crearReserva, esReservaDuplicada } from '../../services/reservas';
 import { textoAFecha } from '../../utils/fechas';
 
-const FONDO = require('../../assets/images/FondoReservarMesa.png');
+const FONDO = require('../../assets/images/fondos/postres.webp');
 
 type Mesa = { id: string; nombre: string; zona: string };
 

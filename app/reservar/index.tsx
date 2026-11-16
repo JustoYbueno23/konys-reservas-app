@@ -18,7 +18,7 @@ import { BotonVolver } from '../../components/BotonVolver';
 import { obtenerMesasActivas } from '../../services/mesas';
 import { numeroDeMesa } from '../../utils/formato';
 
-const FONDO = require('../../assets/images/FondoReservarMesa.png');
+const FONDO = require('../../assets/images/SalonFondo.jpg');
 const MESA = require('../../assets/images/MesasFondo.png');
 const TERRAZA_FONDO = require('../../assets/images/TerrazaFondo.jpg');
 const SALON_FONDO = require('../../assets/images/SalonFondo.jpg');

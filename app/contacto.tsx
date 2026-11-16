@@ -4,7 +4,7 @@ import { Linking, ImageBackground, Pressable, ScrollView, StyleSheet, Text, View
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BotonVolver } from '../components/BotonVolver';
 
-const FONDO = require('../assets/images/fondoInicio.jpg');
+const FONDO = require('../assets/images/TerrazaFondo.jpg');
 
 const COLORES = {
   naranja: '#F28C28',

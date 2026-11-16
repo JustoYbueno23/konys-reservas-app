@@ -1,4 +1,4 @@
-const FONDO = require('../assets/images/FondoReservarMesa.png');
+const FONDO = require('../assets/images/fondos/desgranados.webp');
 export { FONDO };
 
 export const NOMBRE_ZONA: Record<string, string> = {
