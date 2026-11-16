@@ -39,7 +39,7 @@ Aplicación móvil multiplataforma (Android e iOS) para reservar mesas en Konys 
 
 ### ⏳ Lo que falta por hacer
 
-- Distribución en iOS (requiere Apple Developer Program USD $99/año; para probar en iPhone usa Expo Go).
+- iPhone: probar o demostrar la app en un iPhone con Expo Go (gratis, disponible en el App Store). Distribución nativa vía TestFlight requeriría el Apple Developer Program (USD $99/año, no requerido por el PDF).
 - Grabar video explicativo (5-8 minutos).
 - Recompilar el APK con todos los cambios del proyecto (ícono Konys, fotos del menú, pantalla de Ubicación, RLS y descripciones). El APK enlazado abajo corresponde a un build **anterior** al cambio de ícono.
 - Pruebas en celular real y casos de error.
@@ -66,6 +66,15 @@ Aplicación móvil multiplataforma (Android e iOS) para reservar mesas en Konys 
    npx expo start
    ```
 5. Escanea el código QR con la app Expo Go en tu celular.
+
+### iPhone (Expo Go)
+
+1. En el iPhone: instala **Expo Go** desde el App Store (gratis).
+2. Pon el iPhone y el computador en la misma red Wi‑Fi.
+3. En el computador, ejecuta `npx expo start`.
+4. Abre Expo Go en el iPhone y escanea el QR → la app corre idéntica en iOS.
+
+No se necesita pagar Apple Developer Program; una distribución nativa (.ipa/TestFlight) sí lo requeriría, pero no hace falta por el proyecto.
 
 Para aplicar los datos iniciales al proyecto de Supabase:
 
