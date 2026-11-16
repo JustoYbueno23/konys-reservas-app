@@ -1,7 +1,3 @@
-// Pantalla de acceso para el personal del restaurante (admin y mesero)
-// "alEntrar" recibe correo y clave; devuelve un mensaje de error,
-// o null si el inicio de sesión salió bien
-// Autenticación: https://supabase.com/docs/guides/auth
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
 import {

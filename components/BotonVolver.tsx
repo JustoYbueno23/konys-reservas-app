@@ -1,13 +1,10 @@
-// Componente reutilizable: botón "Volver"
-// Lo usan las pantallas de reserva y vuelve a la pantalla anterior
-// (https://docs.expo.dev/router/advanced/navigation/)
 import { useRouter } from 'expo-router';
 import { Pressable, StyleProp, StyleSheet, Text, ViewStyle } from 'react-native';
 
 type Props = {
-  // Texto del botón (por defecto "Volver")
+  
   texto?: string;
-  // Por si alguna pantalla necesita un margen extra
+  
   style?: StyleProp<ViewStyle>;
 };
 

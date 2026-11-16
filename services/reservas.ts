@@ -1,10 +1,5 @@
 import { supabase } from './supabase';
 
-// Pedidos de reservas a Supabase
-// Documentación: https://supabase.com/docs/reference/javascript/select
-//                https://supabase.com/docs/reference/javascript/insert
-//                https://supabase.com/docs/reference/javascript/rpc
-
 export async function obtenerHorasOcupadas(mesaId: string, fecha: string) {
     const { data, error } = await supabase.rpc('horas_ocupadas', {
         p_mesa_id: mesaId,

@@ -1,6 +1,3 @@
-// Componente reutilizable: botón principal (crema)
-// Es el botón con la acción principal de cada pantalla: Continuar, Confirmar...
-// Si se le pasa cargando=true, muestra un indicador y queda deshabilitado
 import { ActivityIndicator, Pressable, StyleProp, StyleSheet, Text, ViewStyle } from 'react-native';
 
 type Props = {
@@ -9,7 +6,7 @@ type Props = {
   disabled?: boolean;
   cargando?: boolean;
   style?: StyleProp<ViewStyle>;
-  // Opacidad del botón cuando está apagado (0.35 o 0.5 según la pantalla)
+  
   opacidadDeshabilitado?: number;
 };
 

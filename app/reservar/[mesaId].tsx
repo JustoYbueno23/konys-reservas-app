@@ -31,7 +31,6 @@ import {
 
 const FONDO = require('../../assets/images/FondoReservarMesa.png');
 
-// Cuantos dias hacia adelante se puede reservar
 const DIAS_ANTICIPACION = 14;
 
 const DIAS_CORTOS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
@@ -73,7 +72,7 @@ export default function DiaYHora() {
   const [error, setError] = useState<string | null>(null);
   const [intento, setIntento] = useState(0);
 
-  // Al abrir la pantalla: cargar la mesa y los dias que tienen servicio
+  
   useEffect(() => {
     let ignore = false;
 
@@ -89,7 +88,7 @@ export default function DiaYHora() {
           return;
         }
 
-        // Solo se muestran los dias en los que el restaurante abre
+        
         const diasConServicio = proximosDias(DIAS_ANTICIPACION).filter((d) =>
           resultadoDias.data.includes(nombreDia(d))
         );
@@ -107,13 +106,13 @@ export default function DiaYHora() {
 
     cargarInicio();
 
-    // Si la pantalla se cierra antes de que termine, se ignora el resultado
+    
     return () => {
       ignore = true;
     };
   }, [mesaId, intento]);
 
-  // Cada vez que cambia el dia: cargar sus horarios y las horas ocupadas
+  
   useEffect(() => {
     if (!fecha) return;
     let ignore = false;
@@ -128,7 +127,7 @@ export default function DiaYHora() {
         if (resultadoOcupadas.error) throw resultadoOcupadas.error;
         if (ignore) return;
 
-        // Almuerzo primero y noche despues
+        
         const ordenados = [...resultadoHorarios.data].sort((a: Horario, b: Horario) =>
           a.hora_inicio.localeCompare(b.hora_inicio)
         );
@@ -167,7 +166,7 @@ export default function DiaYHora() {
     });
   }
 
-  // Franjas de un horario, indicando si estan libres
+  
   function crearFranjas(horario: Horario) {
     const horas = generarFranjas(horario.hora_inicio, horario.hora_fin, horario.duracion_slot);
     return horas.map((hora) => ({
@@ -191,7 +190,7 @@ export default function DiaYHora() {
 
           <Text style={styles.titulo}>Día y hora</Text>
 
-          {/* Error: se puede reintentar */}
+          
           {error && (
             <View style={styles.caja}>
               <Text style={styles.textoCentrado}>{error}</Text>
@@ -201,7 +200,7 @@ export default function DiaYHora() {
             </View>
           )}
 
-          {/* Cargando la mesa */}
+          
           {!error && !mesa && <ActivityIndicator size="large" color={COLORES.naranja} />}
 
           {!error && mesa && (

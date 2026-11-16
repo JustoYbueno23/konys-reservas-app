@@ -1,9 +1,3 @@
-// -------------------------------------------------------------
-// PANTALLA: Confirmación de la reserva
-// Recibe los datos de la pantalla anterior por parámetros:
-// mesaId, fecha, horaInicio, horaFin y personas
-// (https://docs.expo.dev/router/advanced/navigation/)
-// -------------------------------------------------------------
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
@@ -29,14 +23,12 @@ const FONDO = require('../../assets/images/FondoReservarMesa.png');
 
 type Mesa = { id: string; nombre: string; zona: string };
 
-// Armar la fecha en español escribiendo los nombres a mano,
-// para no depender del idioma que tenga configurado el celular
 const DIAS_LARGOS = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
 const MESES = [
   'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
   'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre',
 ];
-// En la base de datos la zona viene en minúscula y sin tilde
+
 const NOMBRE_ZONA: Record<string, string> = { terraza: 'Terraza', salon: 'Salón' };
 
 const COLORES = {
@@ -50,7 +42,6 @@ const COLORES = {
   borde: 'rgba(255, 255, 255, 0.2)',
 };
 
-// "2026-11-10" -> "martes 10 de noviembre"
 function fechaLarga(texto: string) {
   const fecha = textoAFecha(texto);
   return DIAS_LARGOS[fecha.getDay()] + ' ' + fecha.getDate() + ' de ' + MESES[fecha.getMonth()];
@@ -73,9 +64,9 @@ export default function Confirmacion() {
   const [guardando, setGuardando] = useState(false);
   const [resultado, setResultado] = useState<'pendiente' | 'exito' | 'horaTomada'>('pendiente');
 
-  // Al abrir la pantalla se busca el nombre de la mesa para mostrarla en el resumen.
-  // La variable "ignore" evita actualizar el estado si la pantalla ya se cerró
-  // (patrón de la documentación de useEffect: https://react.dev/reference/react/useEffect)
+  
+  
+  
   useEffect(() => {
     let ignore = false;
 
@@ -87,7 +78,7 @@ export default function Confirmacion() {
           setMesaTexto(`${mesa.nombre} - ${NOMBRE_ZONA[mesa.zona] ?? mesa.zona}`);
         }
       } catch (e) {
-        // Si falla, se deja "Mesa" y la reserva se puede hacer igual
+        
       }
     }
 
@@ -101,7 +92,7 @@ export default function Confirmacion() {
   function confirmar() {
     setMensajeError(null);
 
-    // Primero validar los datos, después llamar a Supabase
+    
     if (nombre.trim().length < 2) {
       setMensajeError('Escribe tu nombre.');
       return;
@@ -117,9 +108,9 @@ export default function Confirmacion() {
   async function guardarReserva() {
     setGuardando(true);
 
-    // crearReserva devuelve error si no hay conexión.
-    // esReservaDuplicada detecta si otra persona reservó esa misma
-    // mesa y franja antes (lo bloquea el índice único de la base de datos)
+    
+    
+    
     try {
       const { error } = await crearReserva({
         mesa_id: mesaId,
@@ -145,7 +136,7 @@ export default function Confirmacion() {
     setGuardando(false);
   }
 
-  // Por si la pantalla se abre sin los parámetros de la pantalla anterior
+  
   const faltanDatos = !mesaId || !fecha || !horaInicio || !horaFin || !personas;
 
   return (
@@ -155,8 +146,7 @@ export default function Confirmacion() {
       <SafeAreaView style={styles.container}>
         <StatusBar style="light" />
 
-        {/* El teclado mueve el contenido hacia arriba mientras se escribe
-            (https://reactnative.dev/docs/keyboardavoidingview) */}
+        
         <KeyboardAvoidingView
           style={styles.container}
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -186,7 +176,7 @@ export default function Confirmacion() {
                   {personas} {Number(personas) === 1 ? 'persona' : 'personas'}
                 </Text>
                 <Text style={styles.textoSuave}>Te esperamos, {nombre.trim()}.</Text>
-                {/* router.replace evita que el botón atrás vuelva a este formulario ya enviado */}
+                
                 <Pressable style={styles.botonClaro} onPress={() => router.replace('/')}>
                   <Text style={styles.textoBotonClaro}>Volver al inicio</Text>
                 </Pressable>

@@ -1,4 +1,3 @@
-// Estilos del panel de administración (hoja de estilos compartida)
 import { StyleSheet } from 'react-native';
 import { COLORES } from '../../constants/admin';
 
@@ -19,7 +18,7 @@ export const styles = StyleSheet.create({
     paddingBottom: 40,
   },
 
-  /* ========== Barra superior ========== */
+  
   barraSuperior: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -39,7 +38,7 @@ export const styles = StyleSheet.create({
   },
   textoBarra: { color: COLORES.texto, fontSize: 14, fontWeight: '600' },
 
-  /* ========== Login ========== */
+  
   loginCard: {
     backgroundColor: COLORES.card,
     borderRadius: 24,
@@ -126,7 +125,7 @@ export const styles = StyleSheet.create({
   },
   botonDeshabilitado: { opacity: 0.55 },
 
-  /* ========== Tabs ========== */
+  
   tabs: {
     flexDirection: 'row',
     backgroundColor: 'rgba(255,255,255,0.06)',
@@ -156,7 +155,7 @@ export const styles = StyleSheet.create({
     color: '#1A1A1A',
   },
 
-  /* ========== Encabezados de sección ========== */
+  
   encabezadoSeccion: {
     marginBottom: 14,
   },
@@ -195,7 +194,7 @@ export const styles = StyleSheet.create({
   },
   pillRolTexto: { color: '#1A1A1A', fontSize: 11, fontWeight: '900', textTransform: 'uppercase' },
 
-  /* ========== Reservas: días ========== */
+  
   fechaTexto: {
     color: COLORES.texto,
     fontSize: 18,
@@ -243,7 +242,7 @@ export const styles = StyleSheet.create({
   diaNumero: { color: COLORES.texto, fontSize: 19, fontWeight: '900', marginTop: 2 },
   textoOscuro: { color: '#1A1A1A' },
 
-  /* ========== Tarjeta de reserva ========== */
+  
   tarjetaReserva: {
     flexDirection: 'row',
     backgroundColor: COLORES.card,
@@ -319,7 +318,7 @@ export const styles = StyleSheet.create({
   },
   textoCancelar: { color: '#FF8A8A', fontSize: 13, fontWeight: '800' },
 
-  /* ========== Estado vacío / errores ========== */
+  
   vacioCaja: {
     alignItems: 'center',
     backgroundColor: COLORES.card,
@@ -351,7 +350,7 @@ export const styles = StyleSheet.create({
   },
   textoBotonClaro: { color: '#1A1A1A', fontSize: 14, fontWeight: '800' },
 
-  /* ========== Formularios ========== */
+  
   formCard: {
     backgroundColor: COLORES.card,
     borderRadius: 22,
@@ -387,7 +386,7 @@ export const styles = StyleSheet.create({
     fontSize: 15,
   },
 
-  /* ========== Categoría chips (2 col) ========== */
+  
   categoriaGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -412,7 +411,7 @@ export const styles = StyleSheet.create({
   categoriaPillTexto: { color: COLORES.texto, fontSize: 12, fontWeight: '700' },
   categoriaPillTextoActiva: { color: '#1A1A1A' },
 
-  /* ========== Fila precio + recomendado ========== */
+  
   filaPrecioRecomendado: {
     flexDirection: 'row',
     gap: 16,
@@ -426,7 +425,7 @@ export const styles = StyleSheet.create({
     gap: 6,
   },
 
-  /* ========== Botones formulario ========== */
+  
   botonesFormulario: {
     flexDirection: 'row',
     gap: 10,
@@ -454,7 +453,7 @@ export const styles = StyleSheet.create({
   botonGuardarContenido: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   botonGuardarTexto: { color: '#1A1A1A', fontSize: 15, fontWeight: '900' },
 
-  /* ========== Lista de grupos carta ========== */
+  
   grupo: { marginBottom: 18 },
   grupoEncabezado: {
     flexDirection: 'row',
@@ -533,7 +532,7 @@ export const styles = StyleSheet.create({
     marginLeft: 6,
   },
 
-  /* ========== Mesas ========== */
+  
   zonaFila: { flexDirection: 'row', gap: 10, marginBottom: 6 },
   zonaPill: {
     flex: 1,
@@ -635,7 +634,7 @@ export const styles = StyleSheet.create({
   toggleActivoTextoOk: { color: '#8BE3B2' },
   toggleActivoTextoOff: { color: '#FF8A8A' },
 
-  /* ========== Horarios ========== */
+  
   diasSemanaFila: {
     flexDirection: 'row',
     gap: 6,
@@ -668,6 +667,6 @@ export const styles = StyleSheet.create({
   horarioCampo: { flex: 1 },
   horarioEtiqueta: { color: COLORES.textoSuave, fontSize: 11, fontWeight: '800', letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 6 },
 
-  /* ========== Utilidades ========== */
+  
   cargando: { marginVertical: 30 },
 });

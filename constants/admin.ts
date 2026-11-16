@@ -1,15 +1,11 @@
-// Datos fijos del panel de administración
-
 const FONDO = require('../assets/images/FondoReservarMesa.png');
 export { FONDO };
 
-// En la base de datos la zona viene en minúscula y sin tilde
 export const NOMBRE_ZONA: Record<string, string> = {
   terraza: 'Terraza',
   salon: 'Salón',
 };
 
-// Icono y nombre de cada categoría de la carta
 export const CATEGORIA_INFO: Record<string, { label: string; icon: string }> = {
   entradas: { label: 'Entradas', icon: 'fast-food' },
   'menu-infantil': { label: 'Menú Infantil', icon: 'happy' },
@@ -27,7 +23,6 @@ export const CATEGORIA_INFO: Record<string, { label: string; icon: string }> = {
   congelados: { label: 'Congelados', icon: 'snow' },
 };
 
-// Colores del panel
 export const COLORES = {
   fondo: '#0D1826',
   card: 'rgba(22, 28, 38, 0.92)',

@@ -1,11 +1,3 @@
-// -------------------------------------------------------------
-// PANTALLA: Inicio
-// Logo de Konys Pizza, botón de reservar, horario y botón "A"
-// para el personal del restaurante. Al deslizar hacia abajo
-// se abre la carta.
-// Navegación: https://docs.expo.dev/router/advanced/navigation/
-// ScrollView: https://reactnative.dev/docs/scrollview
-// -------------------------------------------------------------
 import { useFocusEffect, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -40,8 +32,8 @@ export default function Inicio() {
   const [error, setError] = useState<string | null>(null);
   const [hasNavigated, setHasNavigated] = useState(false);
 
-  // Solo comprueba que hay conexión con el restaurante.
-  // La pantalla no muestra datos de mesas, por eso no se guardan
+  
+  
   useEffect(() => {
     let activo = true;
 
@@ -65,7 +57,7 @@ export default function Inicio() {
     }, [])
   );
 
-  // Al deslizar hacia abajo se abre la carta (una sola vez por llegada a la pantalla)
+  
   const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     const offsetY = event.nativeEvent.contentOffset.y;
     if (offsetY > 100 && !hasNavigated) {
@@ -92,7 +84,7 @@ export default function Inicio() {
         >
           <View style={styles.overlay} />
 
-          {/* Boton para el personal del restaurante */}
+          
           <BotonAdmin tamano="grande" style={styles.adminUbicacion} />
 
           <View style={styles.content}>
@@ -108,7 +100,7 @@ export default function Inicio() {
               <Text style={styles.chipText}>12:30–2:30 · 5–11 p. m.</Text>
             </View>
 
-            {/* Circulo grande que lleva a elegir la mesa */}
+            
             <View style={styles.anillo}>
               <Pressable
                 style={styles.reservarButton}
@@ -120,7 +112,7 @@ export default function Inicio() {
               </Pressable>
             </View>
 
-            {/* Aviso solo si no hay conexión con el restaurante */}
+            
             {error && <Text style={styles.estadoError}>Error: {error}</Text>}
 
             <View style={styles.hint} pointerEvents="none">

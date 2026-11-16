@@ -1,10 +1,3 @@
-﻿// -------------------------------------------------------------
-// PANTALLA: Carta
-// Dos vistas: la lista de apartados (Recomendados, Pizzas...)
-// y la lista de platos del apartado elegido.
-// Solo se muestran los platos disponibles en la base de datos.
-// FlatList y SectionList: https://reactnative.dev/docs/flatlist
-// -------------------------------------------------------------
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useMemo, useState } from 'react';
@@ -25,7 +18,6 @@ import { formatoPrecio } from '../utils/formato';
 
 const FONDO = require('../assets/images/FondoReservarMesa.png');
 
-// Propiedades equivalentes a absoluteFillObject, escritas explícitamente
 const fillStyle = {
   position: 'absolute',
   top: 0,
@@ -34,7 +26,6 @@ const fillStyle = {
   bottom: 0,
 } as const;
 
-// Apartados de la carta. La clave "id" es la misma categoria de la base de datos
 const CATEGORIAS = [
   { id: 'recomendados', label: 'Recomendados', imagen: require('../assets/images/categorias/recomendados.jpg') },
   { id: 'entradas', label: 'Entradas', imagen: require('../assets/images/categorias/entradas.jpg') },
@@ -74,7 +65,7 @@ export default function Carta() {
   useEffect(() => {
     let activo = true;
 
-    // Si la pantalla se cierra antes de terminar, el resultado se ignora
+    
     async function cargar() {
       setCargando(true);
       setError(null);
@@ -136,7 +127,7 @@ export default function Carta() {
     );
   }
 
-  // ===== VISTA DE PRODUCTOS DE UN APARTADO =====
+  
   if (categoriaActual) {
     return (
       <ImageBackground source={FONDO} style={styles.fondo} resizeMode="cover">
@@ -176,7 +167,7 @@ export default function Carta() {
                     />
                   ) : (
                     <View style={styles.cartaIconoFondo}>
-                      {/* Icono de reserva si el plato no tiene foto */}
+                      
                       <Ionicons name="restaurant-outline" size={44} color="#F28C28" />
                     </View>
                   )}
@@ -209,7 +200,7 @@ export default function Carta() {
     );
   }
 
-  // ===== VISTA DE APARTADOS (HOME DE LA CARTA) =====
+  
   return (
     <ImageBackground source={FONDO} style={styles.fondo} resizeMode="cover">
       <View style={styles.overlay} pointerEvents="none" />

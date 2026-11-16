@@ -1,10 +1,3 @@
-// -------------------------------------------------------------
-// PANTALLA: Elegir la mesa
-// Muestra las mesas activas agrupadas por zona (Terraza y Salón).
-// Se toca una burbuja para seleccionarla y "Continuar" lleva a elegir
-// el día y la hora.
-// Navegación: https://docs.expo.dev/router/advanced/navigation/
-// -------------------------------------------------------------
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
@@ -42,14 +35,11 @@ const COLORES = {
 
 type Mesa = { id: string; nombre: string; zona: string; capacidad: number };
 
-// La zona viene de la base de datos en minúscula y sin tilde
 const ZONAS = [
   { clave: 'terraza', titulo: 'Terraza', foto: TERRAZA_FONDO },
   { clave: 'salon', titulo: 'Salón', foto: SALON_FONDO },
 ];
 
-// La imagen de la mesa tiene mucho espacio en blanco alrededor, entonces se
-// agranda y se centra para que solo se vea la mesa dentro del círculo
 const TAMANO = 96;
 const IMAGEN_ANCHO = 345;
 const IMAGEN_ALTO = 724;
@@ -58,7 +48,6 @@ const MESA_CENTRO_Y = 365;
 const MESA_DIAMETRO = 290;
 const ESCALA = TAMANO / MESA_DIAMETRO;
 
-// Una burbuja de mesa: foto recortada en el círculo y número encima
 function MesaCirculo({ mesa, seleccionada, alTocar }: {
   mesa: Mesa;
   seleccionada: boolean;
@@ -92,11 +81,11 @@ export default function ReservarIndex() {
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [mesaElegida, setMesaElegida] = useState<string | null>(null);
-  // Si cambia "intento", el useEffect se vuelve a ejecutar (botón Reintentar)
+  
   const [intento, setIntento] = useState(0);
 
-  // Pedir las mesas al abrir la pantalla. "ignore" es el patrón de la
-  // documentación de useEffect para no actualizar el estado si ya se cerró
+  
+  
   useEffect(() => {
     let ignore = false;
 
@@ -127,7 +116,7 @@ export default function ReservarIndex() {
     });
   }
 
-  // Mesas de una zona, ordenadas por el número del nombre
+  
   function mesasDeZona(clave: string) {
     return mesas
       .filter((m) => m.zona === clave)
@@ -145,7 +134,7 @@ export default function ReservarIndex() {
           <View style={styles.barraSuperior}>
             <BotonVolver />
 
-            {/* Atajo para el personal del restaurante */}
+            
             <BotonAdmin />
           </View>
 

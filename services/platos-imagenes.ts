@@ -1,6 +1,3 @@
-// Mapa compartido: nombre del plato → imagen local
-// Lo usan la Carta del cliente y el Panel de administración
-
 export const PLATO_IMG: Record<string, any> = {
   'Entrada mini Konitos': require('../assets/images/platos/entrada-mini-konitos.jpg'),
   'Nachos Enchulados': require('../assets/images/platos/nachos-enchulados.jpg'),

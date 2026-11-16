@@ -1,10 +1,6 @@
-// Componente reutilizable: círculo con la letra "A"
-// Atajo para el personal del restaurante hacia el panel de administración
-// (https://docs.expo.dev/router/advanced/navigation/)
 import { useRouter } from 'expo-router';
 import { Pressable, StyleProp, StyleSheet, Text, ViewStyle } from 'react-native';
 
-// "grande" reproduce el botón que tenía la pantalla de Inicio
 type Props = {
   style?: StyleProp<ViewStyle>;
   tamano?: 'normal' | 'grande';

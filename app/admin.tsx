@@ -1,11 +1,3 @@
-// -------------------------------------------------------------
-// PANTALLA: Panel de administración (solo personal del restaurante)
-// Secciones: Reservas, Carta, Mesas y Horarios.
-// El login usa correo y contraseña; el rol se lee de la
-// tabla perfiles (admin ve todo, mesero solo reservas).
-// Navegación: https://docs.expo.dev/router/advanced/navigation/
-// Autenticación: https://supabase.com/docs/guides/auth
-// -------------------------------------------------------------
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -28,21 +20,18 @@ import { supabase } from '../services/supabase';
 import { DIAS_CORTOS, fechaATexto, formatoFechaLarga, proximosDias } from '../utils/fechas';
 import { formatoPrecio } from '../utils/formato';
 
-import { CATEGORIA_INFO, COLORES, FONDO, NOMBRE_ZONA } from '../constants/admin';
 import { AdminLogin } from '../components/AdminLogin';
 import { styles } from '../components/admin/estilos';
+import { CATEGORIA_INFO, COLORES, FONDO, NOMBRE_ZONA } from '../constants/admin';
 
 export default function Admin() {
   const router = useRouter();
 
-  // Sesión y rol
   const [revisandoSesion, setRevisandoSesion] = useState(true);
   const [rol, setRol] = useState<string | null>(null);
 
-  // Pestaña seleccionada
   const [seccion, setSeccion] = useState<'reservas' | 'carta' | 'mesas' | 'horarios'>('reservas');
 
-  // Reservas
   const [fecha, setFecha] = useState(fechaATexto(new Date()));
   const [reservas, setReservas] = useState<any[]>([]);
   const [cargandoLista, setCargandoLista] = useState(false);
@@ -51,12 +40,10 @@ export default function Admin() {
   const [filtroMesa, setFiltroMesa] = useState<string | null>(null);
   const [mesasFiltro, setMesasFiltro] = useState<any[]>([]);
 
-  // Carta
   const [platos, setPlatos] = useState<any[]>([]);
   const [cargandoPlatos, setCargandoPlatos] = useState(false);
   const [errorPlatos, setErrorPlatos] = useState<string | null>(null);
 
-  // Mesas
   const [mesas, setMesas] = useState<any[]>([]);
   const [cargandoMesas, setCargandoMesas] = useState(false);
   const [errorMesas, setErrorMesas] = useState<string | null>(null);
@@ -68,7 +55,6 @@ export default function Admin() {
   const [formActiva, setFormActiva] = useState(true);
   const [guardandoMesa, setGuardandoMesa] = useState(false);
 
-  // Horarios
   const [horarios, setHorarios] = useState<any[]>([]);
   const [cargandoHorarios, setCargandoHorarios] = useState(false);
   const [errorHorarios, setErrorHorarios] = useState<string | null>(null);
@@ -86,7 +72,6 @@ export default function Admin() {
   const [nocheActivo, setNocheActivo] = useState(true);
   const [guardandoHorario, setGuardandoHorario] = useState(false);
 
-  // Platos CRUD
   const [editandoPlatoId, setEditandoPlatoId] = useState<number | null>(null);
   const [formPlatoNombre, setFormPlatoNombre] = useState('');
   const [formPlatoCategoria, setFormPlatoCategoria] = useState<string>('pizzas');
@@ -99,7 +84,6 @@ export default function Admin() {
     if (rol === 'mesero') setSeccion('reservas');
   }, [rol]);
 
-  // null si el perfil está bien, o el mensaje de error para la pantalla de acceso
   async function verificarRol(userId: string): Promise<string | null> {
     const { data, error } = await supabase
       .from('perfiles')
@@ -129,8 +113,6 @@ export default function Admin() {
     revisarSesion();
   }, []);
 
-  // Recibe correo y clave de la pantalla de acceso.
-  // Devuelve un mensaje de error, o null si el inicio de sesión salió bien
   async function entrar(correo: string, clave: string): Promise<string | null> {
     if (!correo.trim() || !clave) {
       return 'Escribe tu correo y tu contraseña.';
@@ -170,7 +152,6 @@ export default function Admin() {
     router.back();
   }
 
-  // ============ RESERVAS ============
   useEffect(() => {
     if (!rol) return;
     let activo = true;
@@ -201,7 +182,6 @@ export default function Admin() {
     };
   }, [rol, fecha, intento, filtroMesa]);
 
-  // Cargar mesas activas para el filtro
   useEffect(() => {
     if (!rol) return;
     let activo = true;
@@ -256,7 +236,6 @@ export default function Admin() {
     setIntento((i) => i + 1);
   }
 
-  // ============ CARTA ============
   useEffect(() => {
     if (rol !== 'admin' || seccion !== 'carta') return;
     let activo = true;
@@ -371,7 +350,6 @@ export default function Admin() {
     );
   }
 
-  // ============ MESAS ============
   function resetFormMesa() {
     setEditandoMesaId(null);
     setFormNombre('');
@@ -458,7 +436,7 @@ export default function Admin() {
   }
 
   async function eliminarMesa(mesa: any) {
-    // Verificar si tiene reservas pendientes (confirmadas futuras o de hoy) antes de borrar
+    
     const hoy = fechaATexto(new Date());
     const { data: reservasMesa, error: errorConsulta } = await supabase
       .from('reservas')
@@ -502,7 +480,7 @@ export default function Admin() {
     ]);
   }
 
-  // ============ HORARIOS ============
+  
   const DIAS_SEMANA = [
     { clave: 'lunes', etiqueta: 'Lun' },
     { clave: 'martes', etiqueta: 'Mar' },
@@ -632,7 +610,7 @@ export default function Admin() {
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={styles.scrollContent}
         >
-          {/* Barra superior */}
+          
           <View style={styles.barraSuperior}>
             <Pressable style={styles.botonBarra} onPress={volverYCerrarSesion}>
               <Ionicons name="chevron-back" size={20} color="#F5EFE6" />
@@ -648,13 +626,13 @@ export default function Admin() {
 
           {revisandoSesion && <ActivityIndicator size="large" color={COLORES.ambar} style={styles.cargando} />}
 
-          {/* Acceso del personal */}
+          
           {!revisandoSesion && !rol && <AdminLogin alEntrar={entrar} />}
 
-          {/* ============ PANEL AUTENTICADO ============ */}
+          
           {!revisandoSesion && rol && (
             <>
-              {/* Tabs */}
+              
               {rol === 'admin' && (
                 <View style={styles.tabs}>
                   {(['reservas', 'carta', 'mesas', 'horarios'] as const).map((t) => {
@@ -685,7 +663,7 @@ export default function Admin() {
                 </View>
               )}
 
-              {/* ========== RESERVA (admin y mesero) ========== */}
+              
               {(rol === 'mesero' || seccion === 'reservas') && (
                 <>
                   <View style={styles.encabezadoSeccion}>
@@ -732,7 +710,7 @@ export default function Admin() {
                     })}
                   </ScrollView>
 
-                  {/* Filtro por mesa */}
+                  
                   {mesasFiltro.length > 0 && (
                     <ScrollView
                       horizontal
@@ -845,7 +823,7 @@ export default function Admin() {
                 </>
               )}
 
-              {/* ========== CARTA (admin) ========== */}
+              
               {rol === 'admin' && seccion === 'carta' && (
                 <>
                   <View style={styles.encabezadoSeccion}>
@@ -858,7 +836,7 @@ export default function Admin() {
                     </View>
                   </View>
 
-                  {/* Formulario Crear/Editar plato */}
+                  
                   <View style={styles.formCard}>
                     <View style={styles.formEncabezado}>
                       <Ionicons
@@ -1043,7 +1021,7 @@ export default function Admin() {
                 </>
               )}
 
-              {/* ========== MESAS (admin) ========== */}
+              
               {rol === 'admin' && seccion === 'mesas' && (
                 <>
                   <View style={styles.encabezadoSeccion}>
@@ -1056,7 +1034,7 @@ export default function Admin() {
                     </View>
                   </View>
 
-                  {/* Formulario Crear/Editar mesa */}
+                  
                   <View style={styles.formCard}>
                     <View style={styles.formEncabezado}>
                       <Ionicons name="grid-outline" size={20} color={COLORES.ambar} />
@@ -1234,7 +1212,7 @@ export default function Admin() {
                 </>
               )}
 
-              {/* ========== HORARIOS (admin) ========== */}
+              
               {rol === 'admin' && seccion === 'horarios' && (
                 <>
                   <View style={styles.encabezadoSeccion}>
@@ -1277,7 +1255,7 @@ export default function Admin() {
 
                   {!cargandoHorarios && (
                     <>
-                      {/* Jornada Almuerzo */}
+                      
                       <View style={styles.horarioCard}>
                         <View style={styles.horarioEncabezado}>
                           <Ionicons name="sunny-outline" size={22} color={COLORES.ambar} />
@@ -1328,7 +1306,7 @@ export default function Admin() {
                         </View>
                       </View>
 
-                      {/* Jornada Noche */}
+                      
                       <View style={styles.horarioCard}>
                         <View style={styles.horarioEncabezado}>
                           <Ionicons name="moon-outline" size={22} color={COLORES.ambar} />
