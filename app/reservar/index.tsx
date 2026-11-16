@@ -1,501 +1,428 @@
+// -------------------------------------------------------------
+// PANTALLA: Elegir la mesa
+// Muestra las mesas activas agrupadas por zona (Terraza y Salón).
+// Se toca una burbuja para seleccionarla y "Continuar" lleva a elegir
+// el día y la hora.
+// Navegación: https://docs.expo.dev/router/advanced/navigation/
+// -------------------------------------------------------------
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Image,
-    ImageBackground,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    View,
+  ActivityIndicator,
+  Image,
+  ImageBackground,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { obtenerMesasActivas } from '../../services/mesas';
-
-export const options = {
-    headerShown: false,
-};
+import { numeroDeMesa } from '../../utils/formato';
 
 const FONDO = require('../../assets/images/FondoReservarMesa.png');
 const MESA = require('../../assets/images/MesasFondo.png');
 const TERRAZA_FONDO = require('../../assets/images/TerrazaFondo.jpg');
 const SALON_FONDO = require('../../assets/images/SalonFondo.jpg');
 
-// Zona según la base de datos
+const COLORES = {
+  naranja: '#F28C28',
+  crema: '#F2EFEA',
+  oscuro: '#1A1A1A',
+  texto: '#FFFFFF',
+  textoSuave: '#C8C8C8',
+  caja: 'rgba(18, 18, 18, 0.85)',
+  borde: 'rgba(255, 255, 255, 0.2)',
+};
+
 type Mesa = { id: string; nombre: string; zona: string; capacidad: number };
 
-// Zonas que muestra la pantalla: nombre en la base, título bonito y foto
+// La zona viene de la base de datos en minúscula y sin tilde
 const ZONAS = [
-    { clave: 'terraza', titulo: 'Terraza', foto: TERRAZA_FONDO, emoji: '🌿', icono: 'PORCIÓN DE PATIO' },
-    { clave: 'salon', titulo: 'Salón', foto: SALON_FONDO, emoji: '🕯️', icono: 'PORCIÓN DE SALÓN' },
+  { clave: 'terraza', titulo: 'Terraza', foto: TERRAZA_FONDO },
+  { clave: 'salon', titulo: 'Salón', foto: SALON_FONDO },
 ];
 
+// La imagen de la mesa tiene mucho espacio en blanco alrededor, entonces se
+// agranda y se centra para que solo se vea la mesa dentro del círculo
 const TAMANO = 96;
-
-const IMG_W = 345;
-const IMG_H = 724;
-const MESA_CX = 172;
-const MESA_CY = 365;
+const IMAGEN_ANCHO = 345;
+const IMAGEN_ALTO = 724;
+const MESA_CENTRO_X = 172;
+const MESA_CENTRO_Y = 365;
 const MESA_DIAMETRO = 290;
 const ESCALA = TAMANO / MESA_DIAMETRO;
 
-// "Mesa 3" -> "3"
-function numeroDeMesa(nombre: string) {
-    return nombre.replace(/\D/g, '');
-}
-
-function MesaCirculo({
-    mesa,
-    seleccionada,
-    alTocar,
-}: {
-    mesa: Mesa;
-    seleccionada: boolean;
-    alTocar: () => void;
+// Una burbuja de mesa: foto recortada en el círculo y número encima
+function MesaCirculo({ mesa, seleccionada, alTocar }: {
+  mesa: Mesa;
+  seleccionada: boolean;
+  alTocar: () => void;
 }) {
-    return (
-        <View style={styles.mesaItem}>
-            <Pressable
-                onPress={alTocar}
-                style={[styles.burbuja, seleccionada && styles.burbujaSeleccionada]}
-            >
-                <Image
-                    source={MESA}
-                    resizeMode="stretch"
-                    style={{
-                        position: 'absolute',
-                        width: IMG_W * ESCALA,
-                        height: IMG_H * ESCALA,
-                        left: TAMANO / 2 - MESA_CX * ESCALA,
-                        top: TAMANO / 2 - MESA_CY * ESCALA,
-                    }}
-                />
-                <View style={[styles.numeroCirculo, seleccionada && styles.numeroCirculoSel]}>
-                    <Text style={[styles.numero, seleccionada && styles.numeroSel]}>
-                        {numeroDeMesa(mesa.nombre)}
-                    </Text>
-                </View>
-            </Pressable>
-            <View style={styles.capacidadPill}>
-                <Text style={styles.capacidad}>{mesa.capacidad} pers.</Text>
-            </View>
+  return (
+    <View style={styles.mesaItem}>
+      <Pressable
+        style={[styles.circulo, seleccionada && styles.circuloSeleccionado]}
+        onPress={alTocar}
+      >
+        <Image source={MESA} resizeMode="stretch" style={styles.imagenMesa} />
+        <View style={[styles.numeroCaja, seleccionada && styles.numeroCajaSeleccionada]}>
+          <Text style={[styles.numero, seleccionada && styles.textoOscuro]}>
+            {numeroDeMesa(mesa.nombre)}
+          </Text>
         </View>
-    );
-}
+      </Pressable>
 
-function TarjetaZona({
-    titulo,
-    foto,
-    emoji,
-    mesas,
-    mesaElegida,
-    alElegir,
-}: {
-    titulo: string;
-    foto: any;
-    emoji: string;
-    mesas: Mesa[];
-    mesaElegida: string | null;
-    alElegir: (id: string) => void;
-}) {
-    return (
-        <ImageBackground
-            source={foto}
-            style={styles.tarjeta}
-            imageStyle={styles.tarjetaFoto}
-            resizeMode="cover"
-        >
-            <View style={styles.tarjetaOverlay} pointerEvents="none" />
-            <View style={styles.pastilla}>
-                <Text style={styles.pastillaTexto}>
-                    {emoji} {titulo} · {mesas.length} {mesas.length === 1 ? 'mesa' : 'mesas'}
-                </Text>
-            </View>
-            <View style={styles.filaMesas}>
-                {mesas.map((mesa) => (
-                    <MesaCirculo
-                        key={mesa.id}
-                        mesa={mesa}
-                        seleccionada={mesaElegida === mesa.id}
-                        alTocar={() => alElegir(mesa.id)}
-                    />
-                ))}
-            </View>
-        </ImageBackground>
-    );
+      <View style={styles.capacidadCaja}>
+        <Text style={styles.capacidad}>{mesa.capacidad} pers.</Text>
+      </View>
+    </View>
+  );
 }
 
 export default function ReservarIndex() {
-    const router = useRouter();
+  const router = useRouter();
 
-    const [mesas, setMesas] = useState<Mesa[]>([]);
-    const [cargando, setCargando] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-    const [mesaElegida, setMesaElegida] = useState<string | null>(null);
+  const [mesas, setMesas] = useState<Mesa[]>([]);
+  const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [mesaElegida, setMesaElegida] = useState<string | null>(null);
+  // Si cambia "intento", el useEffect se vuelve a ejecutar (botón Reintentar)
+  const [intento, setIntento] = useState(0);
+
+  // Pedir las mesas al abrir la pantalla. "ignore" es el patrón de la
+  // documentación de useEffect para no actualizar el estado si ya se cerró
+  useEffect(() => {
+    let ignore = false;
 
     async function cargarMesas() {
-        setCargando(true);
-        setError(null);
-        try {
-            const { data } = await obtenerMesasActivas();
-            setMesas(data);
-        } catch (e) {
-            setError('No se pudieron cargar las mesas. Revisa tu conexión.');
-        }
-        setCargando(false);
+      setCargando(true);
+      setError(null);
+      try {
+        const respuesta = await obtenerMesasActivas();
+        if (!ignore) setMesas(respuesta.data as Mesa[]);
+      } catch (e) {
+        if (!ignore) setError('No se pudieron cargar las mesas. Revisa tu conexión.');
+      }
+      if (!ignore) setCargando(false);
     }
 
-    useEffect(() => {
-        cargarMesas();
-    }, []);
+    cargarMesas();
 
-    function continuar() {
-        if (!mesaElegida) return;
-        router.push({
-            pathname: '/reservar/[mesaId]',
-            params: { mesaId: mesaElegida },
-        });
-    }
+    return () => {
+      ignore = true;
+    };
+  }, [intento]);
 
-    function mesasDeZona(clave: string) {
-        return mesas
-            .filter((m) => m.zona === clave)
-            .sort((a, b) => Number(numeroDeMesa(a.nombre)) - Number(numeroDeMesa(b.nombre)));
-    }
+  function continuar() {
+    if (!mesaElegida) return;
+    router.push({
+      pathname: '/reservar/[mesaId]',
+      params: { mesaId: mesaElegida },
+    });
+  }
 
-    return (
-        <ImageBackground source={FONDO} style={styles.fondo} resizeMode="cover">
-            <View style={styles.overlay} pointerEvents="none" />
+  // Mesas de una zona, ordenadas por el número del nombre
+  function mesasDeZona(clave: string) {
+    return mesas
+      .filter((m) => m.zona === clave)
+      .sort((a, b) => Number(numeroDeMesa(a.nombre)) - Number(numeroDeMesa(b.nombre)));
+  }
 
-            <SafeAreaView style={styles.container}>
-                <StatusBar style="light" />
+  return (
+    <ImageBackground source={FONDO} style={styles.fondo} resizeMode="cover">
+      <View style={styles.capaOscura} />
 
-                <ScrollView
-                    showsVerticalScrollIndicator={false}
-                    contentContainerStyle={styles.scrollContent}
+      <SafeAreaView style={styles.container}>
+        <StatusBar style="light" />
+
+        <ScrollView contentContainerStyle={styles.contenido}>
+          <View style={styles.barraSuperior}>
+            <Pressable style={styles.botonVolver} onPress={() => router.back()}>
+              <Text style={styles.textoVolver}>Volver</Text>
+            </Pressable>
+
+            {/* Atajo para el personal del restaurante */}
+            <Pressable style={styles.botonAdmin} onPress={() => router.push('/admin')}>
+              <Text style={styles.letraAdmin}>A</Text>
+            </Pressable>
+          </View>
+
+          <Text style={styles.titulo}>Elige tu mesa</Text>
+          <Text style={styles.subtitulo}>Toca una burbuja para seleccionarla</Text>
+
+          {cargando && <ActivityIndicator size="large" color={COLORES.naranja} />}
+
+          {error && (
+            <View style={styles.cajaMensaje}>
+              <Text style={styles.textoMensaje}>{error}</Text>
+              <Pressable style={styles.botonClaro} onPress={() => setIntento(intento + 1)}>
+                <Text style={styles.textoBotonClaro}>Reintentar</Text>
+              </Pressable>
+            </View>
+          )}
+
+          {!cargando && !error && mesas.length === 0 && (
+            <View style={styles.cajaMensaje}>
+              <Text style={styles.textoMensaje}>No hay mesas disponibles por ahora.</Text>
+            </View>
+          )}
+
+          {!cargando &&
+            !error &&
+            ZONAS.map((zona) => {
+              const mesasZona = mesasDeZona(zona.clave);
+              if (mesasZona.length === 0) return null;
+
+              return (
+                <ImageBackground
+                  key={zona.clave}
+                  source={zona.foto}
+                  style={styles.tarjeta}
+                  imageStyle={styles.tarjetaFoto}
+                  resizeMode="cover"
                 >
-                    {/* Barra superior */}
-                    <View style={styles.barraSuperior}>
-                        <Pressable style={styles.botonBarra} onPress={() => router.back()}>
-                            <Text style={styles.textoBarra}>‹ Volver</Text>
-                        </Pressable>
-                        <Pressable
-                            style={styles.adminButton}
-                            onPress={() => router.push('/admin')}
-                        >
-                            <Text style={styles.adminLetter}>A</Text>
-                        </Pressable>
-                    </View>
+                  <View style={styles.tarjetaCapa} />
 
-                    {/* Encabezado */}
-                    <Text style={styles.titulo}>Elige tu mesa</Text>
-                    <Text style={styles.subtitulo}>Toca una burbuja para seleccionarla</Text>
+                  <View style={styles.etiquetaZona}>
+                    <Text style={styles.textoZona}>
+                      {zona.titulo} - {mesasZona.length} {mesasZona.length === 1 ? 'mesa' : 'mesas'}
+                    </Text>
+                  </View>
 
-                    {cargando && <ActivityIndicator size="large" color="#F28C28" style={styles.cargando} />}
+                  <View style={styles.filaMesas}>
+                    {mesasZona.map((mesa) => (
+                      <MesaCirculo
+                        key={mesa.id}
+                        mesa={mesa}
+                        seleccionada={mesaElegida === mesa.id}
+                        alTocar={() => setMesaElegida(mesa.id)}
+                      />
+                    ))}
+                  </View>
+                </ImageBackground>
+              );
+            })}
 
-                    {error && (
-                        <View style={styles.mensajeCard}>
-                            <Text style={styles.mensajeTexto}>{error}</Text>
-                            <Pressable style={styles.botonClaro} onPress={cargarMesas}>
-                                <Text style={styles.textoBotonClaro}>Reintentar</Text>
-                            </Pressable>
-                        </View>
-                    )}
-
-                    {!cargando && !error && mesas.length === 0 && (
-                        <View style={styles.vacioCaja}>
-                            <Text style={styles.vacioEmoji}>🪑</Text>
-                            <Text style={styles.vacioTexto}>No hay mesas disponibles por ahora</Text>
-                            <Text style={styles.vacioSub}>
-                                Estamos esperando nuevas mesas. Vuelve pronto.
-                            </Text>
-                        </View>
-                    )}
-
-                    {!cargando &&
-                        !error &&
-                        ZONAS.map((zona) => {
-                            const mesasZona = mesasDeZona(zona.clave);
-                            if (mesasZona.length === 0) return null;
-                            return (
-                                <TarjetaZona
-                                    key={zona.clave}
-                                    titulo={zona.titulo}
-                                    foto={zona.foto}
-                                    emoji={zona.emoji}
-                                    mesas={mesasZona}
-                                    mesaElegida={mesaElegida}
-                                    alElegir={setMesaElegida}
-                                />
-                            );
-                        })}
-
-                    <Pressable
-                        style={[styles.botonContinuar, !mesaElegida && styles.botonDeshabilitado]}
-                        onPress={continuar}
-                        disabled={!mesaElegida}
-                    >
-                        <Text style={styles.textoContinuar}>Continuar</Text>
-                    </Pressable>
-                </ScrollView>
-            </SafeAreaView>
-        </ImageBackground>
-    );
+          <Pressable
+            style={[styles.botonContinuar, !mesaElegida && styles.botonApagado]}
+            onPress={continuar}
+            disabled={!mesaElegida}
+          >
+            <Text style={styles.textoContinuar}>Continuar</Text>
+          </Pressable>
+        </ScrollView>
+      </SafeAreaView>
+    </ImageBackground>
+  );
 }
 
 const styles = StyleSheet.create({
-    fondo: {
-        flex: 1,
-        backgroundColor: '#060c12',
-    },
-    overlay: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: 'rgba(0,0,0,0.42)',
-    },
-    container: {
-        flex: 1,
-    },
-    scrollContent: {
-        flexGrow: 1,
-        paddingHorizontal: 20,
-        paddingTop: 16,
-        paddingBottom: 40,
-    },
-    cargando: {
-        marginTop: 40,
-    },
-    barraSuperior: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: 16,
-    },
-    botonBarra: {
-        paddingHorizontal: 14,
-        paddingVertical: 8,
-        borderRadius: 20,
-        backgroundColor: 'rgba(0,0,0,0.45)',
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.18)',
-    },
-    textoBarra: {
-        color: '#FFFFFF',
-        fontSize: 15,
-        fontWeight: '600',
-    },
-    adminButton: {
-        width: 48,
-        height: 48,
-        borderRadius: 24,
-        borderWidth: 1.5,
-        borderColor: 'rgba(255,255,255,0.7)',
-        backgroundColor: 'rgba(0,0,0,0.4)',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    adminLetter: {
-        color: '#FFFFFF',
-        fontWeight: '700',
-        fontSize: 18,
-    },
-
-    /* ---------- Encabezado principal ---------- */
-    titulo: {
-        fontSize: 36,
-        fontWeight: '900',
-        color: '#FFFFFF',
-        letterSpacing: 0.3,
-        textShadowColor: '#000',
-        textShadowOffset: { width: 1.5, height: 1.5 },
-        textShadowRadius: 4,
-    },
-    subtitulo: {
-        fontSize: 15,
-        color: '#C9C9C9',
-        marginTop: 6,
-        marginBottom: 18,
-    },
-
-    /* ---------- Tarjeta por zona ---------- */
-    tarjeta: {
-        marginBottom: 22,
-        borderRadius: 24,
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.18)',
-        padding: 14,
-        overflow: 'hidden',
-        minHeight: 185,
-        justifyContent: 'space-between',
-    },
-    tarjetaFoto: {
-        borderRadius: 24,
-    },
-    tarjetaOverlay: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: 'rgba(0,0,0,0.55)',
-    },
-    pastilla: {
-        alignSelf: 'flex-start',
-        paddingHorizontal: 14,
-        paddingVertical: 7,
-        borderRadius: 20,
-        backgroundColor: 'rgba(0,0,0,0.78)',
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.28)',
-        marginBottom: 12,
-    },
-    pastillaTexto: {
-        color: '#FFFFFF',
-        fontSize: 15,
-        fontWeight: '800',
-        textShadowColor: '#000',
-        textShadowOffset: { width: 1, height: 1 },
-        textShadowRadius: 2,
-    },
-    filaMesas: {
-        flexDirection: 'row',
-        justifyContent: 'center',
-        alignItems: 'flex-start',
-        gap: 18,
-        marginTop: 6,
-    },
-    mesaItem: {
-        alignItems: 'center',
-        width: 108,
-    },
-    burbuja: {
-        width: TAMANO,
-        height: TAMANO,
-        borderRadius: TAMANO / 2,
-        borderWidth: 2.5,
-        borderColor: 'rgba(255,255,255,0.55)',
-        overflow: 'hidden',
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: '#3b2a20',
-        shadowColor: '#000',
-        shadowOpacity: 0.3,
-        shadowRadius: 6,
-    },
-    burbujaSeleccionada: {
-        borderColor: '#F28C28',
-        borderWidth: 3.5,
-        shadowColor: '#F28C28',
-        shadowOpacity: 0.6,
-        shadowRadius: 10,
-    },
-    numeroCirculo: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        backgroundColor: 'rgba(0,0,0,0.65)',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    numeroCirculoSel: {
-        backgroundColor: '#F28C28',
-    },
-    numero: {
-        color: '#FFFFFF',
-        fontSize: 22,
-        fontWeight: '800',
-    },
-    numeroSel: {
-        color: '#1A1A1A',
-    },
-    capacidadPill: {
-        marginTop: 8,
-        backgroundColor: 'rgba(0,0,0,0.8)',
-        paddingHorizontal: 12,
-        paddingVertical: 5,
-        borderRadius: 16,
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.22)',
-    },
-    capacidad: {
-        color: '#FFFFFF',
-        fontSize: 13,
-        fontWeight: '800',
-        textAlign: 'center',
-    },
-
-    /* ---------- Botón continuar ---------- */
-    botonContinuar: {
-        backgroundColor: '#F2EFEA',
-        height: 60,
-        borderRadius: 30,
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginTop: 6,
-        marginHorizontal: 12,
-        borderWidth: 2,
-        borderColor: '#F28C28',
-    },
-    botonDeshabilitado: {
-        opacity: 0.35,
-    },
-    textoContinuar: {
-        color: '#1A1A1A',
-        fontSize: 18,
-        fontWeight: '800',
-        letterSpacing: 0.5,
-    },
-
-    /* ---------- Mensajes / vacío ---------- */
-    mensajeCard: {
-        backgroundColor: 'rgba(18,18,18,0.82)',
-        borderRadius: 22,
-        padding: 20,
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.14)',
-        alignItems: 'center',
-        marginVertical: 16,
-    },
-    mensajeTexto: {
-        color: '#FFFFFF',
-        fontSize: 16,
-        textAlign: 'center',
-        marginBottom: 14,
-    },
-    botonClaro: {
-        backgroundColor: '#F2EFEA',
-        height: 46,
-        paddingHorizontal: 26,
-        borderRadius: 23,
-        justifyContent: 'center',
-        borderWidth: 2,
-        borderColor: '#F28C28',
-    },
-    textoBotonClaro: {
-        color: '#1A1A1A',
-        fontSize: 15,
-        fontWeight: '800',
-    },
-    vacioCaja: {
-        alignItems: 'center',
-        backgroundColor: 'rgba(18,18,18,0.7)',
-        borderRadius: 24,
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.12)',
-        padding: 40,
-        marginVertical: 24,
-    },
-    vacioEmoji: { fontSize: 64, marginBottom: 14 },
-    vacioTexto: { color: '#FFF', fontSize: 20, fontWeight: '800', textAlign: 'center' },
-    vacioSub: {
-        color: '#B0B0B0',
-        fontSize: 14,
-        textAlign: 'center',
-        marginTop: 8,
-    },
+  fondo: {
+    flex: 1,
+    backgroundColor: '#000000',
+  },
+  capaOscura: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.42)',
+  },
+  container: {
+    flex: 1,
+  },
+  contenido: {
+    padding: 20,
+    paddingBottom: 40,
+  },
+  barraSuperior: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  botonVolver: {
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: COLORES.borde,
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+  },
+  textoVolver: {
+    color: COLORES.texto,
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  botonAdmin: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 0.7)',
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  letraAdmin: {
+    color: COLORES.texto,
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  titulo: {
+    color: COLORES.texto,
+    fontSize: 34,
+    fontWeight: 'bold',
+  },
+  subtitulo: {
+    color: COLORES.textoSuave,
+    fontSize: 15,
+    marginTop: 6,
+    marginBottom: 18,
+  },
+  tarjeta: {
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: COLORES.borde,
+    padding: 14,
+    marginBottom: 22,
+    overflow: 'hidden',
+    minHeight: 185,
+  },
+  tarjetaFoto: {
+    borderRadius: 22,
+  },
+  tarjetaCapa: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.55)',
+  },
+  etiquetaZona: {
+    alignSelf: 'flex-start',
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: COLORES.borde,
+    backgroundColor: 'rgba(0, 0, 0, 0.75)',
+    marginBottom: 12,
+  },
+  textoZona: {
+    color: COLORES.texto,
+    fontSize: 15,
+    fontWeight: 'bold',
+  },
+  filaMesas: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 18,
+  },
+  mesaItem: {
+    alignItems: 'center',
+    width: 108,
+  },
+  circulo: {
+    width: TAMANO,
+    height: TAMANO,
+    borderRadius: TAMANO / 2,
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.55)',
+    backgroundColor: '#3B2A20',
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  circuloSeleccionado: {
+    borderColor: COLORES.naranja,
+    borderWidth: 4,
+  },
+  imagenMesa: {
+    position: 'absolute',
+    width: IMAGEN_ANCHO * ESCALA,
+    height: IMAGEN_ALTO * ESCALA,
+    left: TAMANO / 2 - MESA_CENTRO_X * ESCALA,
+    top: TAMANO / 2 - MESA_CENTRO_Y * ESCALA,
+  },
+  numeroCaja: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(0, 0, 0, 0.65)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  numeroCajaSeleccionada: {
+    backgroundColor: COLORES.naranja,
+  },
+  numero: {
+    color: COLORES.texto,
+    fontSize: 22,
+    fontWeight: 'bold',
+  },
+  textoOscuro: {
+    color: COLORES.oscuro,
+  },
+  capacidadCaja: {
+    marginTop: 8,
+    paddingVertical: 5,
+    paddingHorizontal: 12,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: COLORES.borde,
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+  },
+  capacidad: {
+    color: COLORES.texto,
+    fontSize: 13,
+    fontWeight: 'bold',
+  },
+  cajaMensaje: {
+    backgroundColor: COLORES.caja,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: COLORES.borde,
+    padding: 18,
+    marginVertical: 14,
+  },
+  textoMensaje: {
+    color: COLORES.texto,
+    fontSize: 16,
+    textAlign: 'center',
+  },
+  botonClaro: {
+    alignSelf: 'center',
+    backgroundColor: COLORES.crema,
+    paddingVertical: 12,
+    paddingHorizontal: 26,
+    borderRadius: 22,
+    marginTop: 14,
+  },
+  textoBotonClaro: {
+    color: COLORES.oscuro,
+    fontSize: 15,
+    fontWeight: 'bold',
+  },
+  botonContinuar: {
+    backgroundColor: COLORES.crema,
+    height: 58,
+    borderRadius: 29,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 6,
+  },
+  botonApagado: {
+    opacity: 0.35,
+  },
+  textoContinuar: {
+    color: COLORES.oscuro,
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
 });

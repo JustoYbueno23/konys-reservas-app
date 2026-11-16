@@ -1,3 +1,9 @@
+// -------------------------------------------------------------
+// PANTALLA: Confirmación de la reserva
+// Recibe los datos de la pantalla anterior por parámetros:
+// mesaId, fecha, horaInicio, horaFin y personas
+// (https://docs.expo.dev/router/advanced/navigation/)
+// -------------------------------------------------------------
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
@@ -18,22 +24,35 @@ import { obtenerMesasActivas } from '../../services/mesas';
 import { crearReserva, esReservaDuplicada } from '../../services/reservas';
 import { textoAFecha } from '../../utils/fechas';
 
-export const options = {
-  headerShown: false,
-};
-
 const FONDO = require('../../assets/images/FondoReservarMesa.png');
 
+type Mesa = { id: string; nombre: string; zona: string };
+
+// Armar la fecha en español escribiendo los nombres a mano,
+// para no depender del idioma que tenga configurado el celular
 const DIAS_LARGOS = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
 const MESES = [
   'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
   'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre',
 ];
+// En la base de datos la zona viene en minúscula y sin tilde
 const NOMBRE_ZONA: Record<string, string> = { terraza: 'Terraza', salon: 'Salón' };
 
-function fechaBonita(texto: string) {
-  const d = textoAFecha(texto);
-  return `${DIAS_LARGOS[d.getDay()]} ${d.getDate()} de ${MESES[d.getMonth()]}`;
+const COLORES = {
+  naranja: '#F28C28',
+  crema: '#F2EFEA',
+  oscuro: '#1A1A1A',
+  texto: '#FFFFFF',
+  textoSuave: '#C8C8C8',
+  error: '#FF8A80',
+  caja: 'rgba(18, 18, 18, 0.85)',
+  borde: 'rgba(255, 255, 255, 0.2)',
+};
+
+// "2026-11-10" -> "martes 10 de noviembre"
+function fechaLarga(texto: string) {
+  const fecha = textoAFecha(texto);
+  return DIAS_LARGOS[fecha.getDay()] + ' ' + fecha.getDate() + ' de ' + MESES[fecha.getMonth()];
 }
 
 export default function Confirmacion() {
@@ -49,40 +68,57 @@ export default function Confirmacion() {
   const [mesaTexto, setMesaTexto] = useState('Mesa');
   const [nombre, setNombre] = useState('');
   const [contacto, setContacto] = useState('');
-  const [errorForm, setErrorForm] = useState<string | null>(null);
-  const [errorEnvio, setErrorEnvio] = useState<string | null>(null);
+  const [mensajeError, setMensajeError] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
-  const [exito, setExito] = useState(false);
-  const [horaTomada, setHoraTomada] = useState(false);
+  const [resultado, setResultado] = useState<'pendiente' | 'exito' | 'horaTomada'>('pendiente');
 
-  // Solo para mostrar el nombre de la mesa en el resumen.
+  // Al abrir la pantalla se busca el nombre de la mesa para mostrarla en el resumen.
+  // La variable "ignore" evita actualizar el estado si la pantalla ya se cerró
+  // (patrón de la documentación de useEffect: https://react.dev/reference/react/useEffect)
   useEffect(() => {
+    let ignore = false;
+
     async function cargarMesa() {
       try {
-        const { data } = await obtenerMesasActivas();
-        const mesa = data.find((m: { id: string }) => m.id === mesaId);
-        if (mesa) {
-          setMesaTexto(`${mesa.nombre} · ${NOMBRE_ZONA[mesa.zona] ?? mesa.zona}`);
+        const respuesta = await obtenerMesasActivas();
+        const mesa = (respuesta.data as Mesa[]).find((m) => m.id === mesaId);
+        if (mesa && !ignore) {
+          setMesaTexto(`${mesa.nombre} - ${NOMBRE_ZONA[mesa.zona] ?? mesa.zona}`);
         }
-      } catch (e) { }
+      } catch (e) {
+        // Si falla, se deja "Mesa" y la reserva se puede hacer igual
+      }
     }
+
     cargarMesa();
+
+    return () => {
+      ignore = true;
+    };
   }, [mesaId]);
 
-  async function confirmar() {
-    setErrorForm(null);
-    setErrorEnvio(null);
+  function confirmar() {
+    setMensajeError(null);
 
+    // Primero validar los datos, después llamar a Supabase
     if (nombre.trim().length < 2) {
-      setErrorForm('Escribe tu nombre.');
+      setMensajeError('Escribe tu nombre.');
       return;
     }
     if (contacto.replace(/\D/g, '').length < 7) {
-      setErrorForm('Escribe un teléfono válido (mínimo 7 números).');
+      setMensajeError('Escribe un teléfono válido (mínimo 7 números).');
       return;
     }
 
+    guardarReserva();
+  }
+
+  async function guardarReserva() {
     setGuardando(true);
+
+    // crearReserva devuelve error si no hay conexión.
+    // esReservaDuplicada detecta si otra persona reservó esa misma
+    // mesa y franja antes (lo bloquea el índice único de la base de datos)
     try {
       const { error } = await crearReserva({
         mesa_id: mesaId,
@@ -95,35 +131,38 @@ export default function Confirmacion() {
       });
 
       if (esReservaDuplicada(error)) {
-        setHoraTomada(true);
+        setResultado('horaTomada');
       } else if (error) {
-        setErrorEnvio('No se pudo crear la reserva. Revisa tu conexión e inténtalo de nuevo.');
+        setMensajeError('No se pudo crear la reserva. Revisa tu conexión e inténtalo de nuevo.');
       } else {
-        setExito(true);
+        setResultado('exito');
       }
     } catch (e) {
-      setErrorEnvio('No se pudo crear la reserva. Revisa tu conexión e inténtalo de nuevo.');
+      setMensajeError('No se pudo crear la reserva. Revisa tu conexión e inténtalo de nuevo.');
     }
+
     setGuardando(false);
   }
 
+  // Por si la pantalla se abre sin los parámetros de la pantalla anterior
   const faltanDatos = !mesaId || !fecha || !horaInicio || !horaFin || !personas;
 
   return (
     <ImageBackground source={FONDO} style={styles.fondo} resizeMode="cover">
-      <View style={styles.overlay} pointerEvents="none" />
+      <View style={styles.capaOscura} />
 
       <SafeAreaView style={styles.container}>
         <StatusBar style="light" />
 
+        {/* El teclado mueve el contenido hacia arriba mientras se escribe
+            (https://reactnative.dev/docs/keyboardavoidingview) */}
         <KeyboardAvoidingView
           style={styles.container}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         >
           <ScrollView
-            showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
-            contentContainerStyle={styles.scrollContent}
+            contentContainerStyle={styles.contenido}
           >
             {faltanDatos && (
               <View style={styles.caja}>
@@ -134,30 +173,27 @@ export default function Confirmacion() {
               </View>
             )}
 
-            {!faltanDatos && exito && (
+            {!faltanDatos && resultado === 'exito' && (
               <View style={styles.caja}>
-                <View style={styles.checkCirculo}>
-                  <Text style={styles.checkTexto}>✓</Text>
-                </View>
-                <Text style={styles.cajaTitulo}>¡Reserva confirmada!</Text>
+                <Text style={styles.cajaTitulo}>Reserva confirmada</Text>
+                <Text style={styles.cajaTexto}>{mesaTexto}</Text>
+                <Text style={styles.cajaTexto}>{fechaLarga(fecha)}</Text>
                 <Text style={styles.cajaTexto}>
-                  {mesaTexto}{'\n'}
-                  {fechaBonita(fecha)}{'\n'}
-                  {horaInicio} – {horaFin}{'\n'}
+                  {horaInicio} a {horaFin}
+                </Text>
+                <Text style={styles.cajaTexto}>
                   {personas} {Number(personas) === 1 ? 'persona' : 'personas'}
                 </Text>
-                <Text style={styles.cajaTextoLight}>Te esperamos, {nombre.trim()}.</Text>
+                <Text style={styles.textoSuave}>Te esperamos, {nombre.trim()}.</Text>
+                {/* router.replace evita que el botón atrás vuelva a este formulario ya enviado */}
                 <Pressable style={styles.botonClaro} onPress={() => router.replace('/')}>
                   <Text style={styles.textoBotonClaro}>Volver al inicio</Text>
                 </Pressable>
               </View>
             )}
 
-            {!faltanDatos && !exito && horaTomada && (
+            {!faltanDatos && resultado === 'horaTomada' && (
               <View style={styles.caja}>
-                <View style={styles.horaTomadaCirculo}>
-                  <Text style={styles.horaTomadaIcono}>🕐</Text>
-                </View>
                 <Text style={styles.cajaTitulo}>Esa hora ya fue tomada</Text>
                 <Text style={styles.cajaTexto}>
                   Alguien reservó esta mesa a esa hora justo antes que tú. Elige otra hora u otra mesa.
@@ -168,87 +204,73 @@ export default function Confirmacion() {
               </View>
             )}
 
-            {!faltanDatos && !exito && !horaTomada && (
+            {!faltanDatos && resultado === 'pendiente' && (
               <>
-                <View style={styles.barraSuperior}>
-                  <Pressable style={styles.botonBarra} onPress={() => router.back()}>
-                    <Text style={styles.textoBarra}>‹ Volver</Text>
-                  </Pressable>
-                </View>
+                <Pressable style={styles.botonVolver} onPress={() => router.back()}>
+                  <Text style={styles.textoVolver}>Volver</Text>
+                </Pressable>
 
                 <Text style={styles.titulo}>Confirma tu reserva</Text>
                 <Text style={styles.subtitulo}>Revisa los datos y déjanos cómo contactarte</Text>
 
-                {/* Resumen tipo "ticket" */}
-                <View style={styles.ticket}>
-                  <View style={styles.ticketCabecera}>
-                    <Text style={styles.ticketCabeceraTexto}>RESUMEN DE RESERVA</Text>
+                <View style={styles.caja}>
+                  <View style={styles.filaResumen}>
+                    <Text style={styles.filaEtiqueta}>Mesa</Text>
+                    <Text style={styles.filaValor}>{mesaTexto}</Text>
                   </View>
-                  <FilaTicket icono="🪑" etiqueta="Mesa" valor={mesaTexto} />
-                  <FilaTicket icono="📅" etiqueta="Día" valor={fechaBonita(fecha)} />
-                  <FilaTicket icono="⏰" etiqueta="Hora" valor={`${horaInicio} – ${horaFin}`} />
-                  <FilaTicket
-                    icono="👥"
-                    etiqueta="Personas"
-                    valor={`${personas} ${Number(personas) === 1 ? 'persona' : 'personas'}`}
-                    ultima
-                  />
+                  <View style={styles.filaResumen}>
+                    <Text style={styles.filaEtiqueta}>Día</Text>
+                    <Text style={styles.filaValor}>{fechaLarga(fecha)}</Text>
+                  </View>
+                  <View style={styles.filaResumen}>
+                    <Text style={styles.filaEtiqueta}>Hora</Text>
+                    <Text style={styles.filaValor}>{horaInicio} a {horaFin}</Text>
+                  </View>
+                  <View style={[styles.filaResumen, styles.filaSinLinea]}>
+                    <Text style={styles.filaEtiqueta}>Personas</Text>
+                    <Text style={styles.filaValor}>
+                      {personas} {Number(personas) === 1 ? 'persona' : 'personas'}
+                    </Text>
+                  </View>
                 </View>
 
-                {/* Datos del cliente */}
-                <View style={styles.bloqueDatos}>
-                  <View style={styles.bloqueEncabezado}>
-                    <Text style={styles.bloqueEmoji}>📋</Text>
-                    <Text style={styles.bloqueTitulo}>Tus datos</Text>
-                  </View>
-
-                  <Text style={styles.inputEtiqueta}>Tu nombre</Text>
+                <View style={styles.caja}>
+                  <Text style={styles.etiqueta}>Tu nombre</Text>
                   <TextInput
                     style={styles.input}
                     value={nombre}
                     onChangeText={setNombre}
                     placeholder="Nombre y apellido"
-                    placeholderTextColor="rgba(255,255,255,0.35)"
+                    placeholderTextColor="rgba(255, 255, 255, 0.4)"
                     autoCapitalize="words"
                     editable={!guardando}
                   />
 
-                  <Text style={styles.inputEtiqueta}>Teléfono de contacto</Text>
+                  <Text style={styles.etiqueta}>Teléfono de contacto</Text>
                   <TextInput
                     style={styles.input}
                     value={contacto}
                     onChangeText={setContacto}
                     placeholder="Ej: 300 123 4567"
-                    placeholderTextColor="rgba(255,255,255,0.35)"
+                    placeholderTextColor="rgba(255, 255, 255, 0.4)"
                     keyboardType="phone-pad"
                     editable={!guardando}
                   />
                 </View>
 
-                {errorForm && (
-                  <View style={styles.mensajeError}>
-                    <Text style={styles.mensajeErrorTexto}>{errorForm}</Text>
-                  </View>
-                )}
-                {errorEnvio && (
-                  <View style={styles.mensajeError}>
-                    <Text style={styles.mensajeErrorTexto}>{errorEnvio}</Text>
-                  </View>
-                )}
+                {mensajeError && <Text style={styles.textoError}>{mensajeError}</Text>}
 
                 <Pressable
-                  style={[styles.botonConfirmar, guardando && styles.botonDeshabilitado]}
+                  style={[styles.botonConfirmar, guardando && styles.botonApagado]}
                   onPress={confirmar}
                   disabled={guardando}
                 >
                   {guardando ? (
-                    <ActivityIndicator color="#FFFFFF" />
+                    <ActivityIndicator color={COLORES.oscuro} />
                   ) : (
                     <Text style={styles.textoConfirmar}>Confirmar reserva</Text>
                   )}
                 </Pressable>
-
-                <Text style={styles.notaFinal}>Al confirmar, aceptas que te contactaremos al número ingresado.</Text>
               </>
             )}
           </ScrollView>
@@ -258,258 +280,150 @@ export default function Confirmacion() {
   );
 }
 
-function FilaTicket({
-  icono,
-  etiqueta,
-  valor,
-  ultima,
-}: {
-  icono: string;
-  etiqueta: string;
-  valor: string;
-  ultima?: boolean;
-}) {
-  return (
-    <View style={[styles.filaTicket, !ultima && styles.filaTicketLinea]}>
-      <View style={styles.filaTicketIzq}>
-        <Text style={styles.filaTicketIcono}>{icono}</Text>
-        <Text style={styles.filaTicketEtiqueta}>{etiqueta}</Text>
-      </View>
-      <Text style={styles.filaTicketValor}>{valor}</Text>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
-  fondo: { flex: 1, backgroundColor: '#0d2b3e' },
-  overlay: {
+  fondo: {
+    flex: 1,
+    backgroundColor: '#000000',
+  },
+  capaOscura: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.55)',
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
   },
-  container: { flex: 1 },
-  scrollContent: {
-    flexGrow: 1,
-    paddingHorizontal: 20,
-    paddingTop: 16,
+  container: {
+    flex: 1,
+  },
+  contenido: {
+    padding: 20,
     paddingBottom: 40,
   },
-
-  /* ---------- Volver ---------- */
-  barraSuperior: { marginBottom: 14 },
-  botonBarra: {
+  botonVolver: {
     alignSelf: 'flex-start',
-    paddingHorizontal: 14,
     paddingVertical: 8,
+    paddingHorizontal: 14,
     borderRadius: 20,
-    backgroundColor: 'rgba(0,0,0,0.45)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.18)',
+    borderColor: COLORES.borde,
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    marginBottom: 14,
   },
-  textoBarra: { color: '#FFFFFF', fontSize: 15, fontWeight: '600' },
-
-  /* ---------- Encabezado ---------- */
+  textoVolver: {
+    color: COLORES.texto,
+    fontSize: 15,
+    fontWeight: '600',
+  },
   titulo: {
-    fontSize: 32,
-    fontWeight: '800',
-    color: '#FFFFFF',
-    letterSpacing: 0.3,
-    textShadowColor: '#000',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 3,
+    color: COLORES.texto,
+    fontSize: 30,
+    fontWeight: 'bold',
   },
   subtitulo: {
+    color: COLORES.textoSuave,
     fontSize: 14,
-    color: '#C9C9C9',
     marginTop: 6,
     marginBottom: 18,
   },
-
-  /* ---------- Resumen tipo ticket ---------- */
-  ticket: {
-    borderRadius: 20,
-    backgroundColor: 'rgba(18,18,18,0.88)',
+  caja: {
+    backgroundColor: COLORES.caja,
+    borderRadius: 18,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.18)',
-    overflow: 'hidden',
-    marginBottom: 22,
+    borderColor: COLORES.borde,
+    padding: 16,
+    marginBottom: 14,
   },
-  ticketCabecera: {
-    paddingVertical: 10,
-    paddingHorizontal: 18,
-    backgroundColor: '#F28C28',
-    borderBottomWidth: 2,
-    borderBottomColor: 'rgba(0,0,0,0.25)',
+  cajaTitulo: {
+    color: COLORES.texto,
+    fontSize: 24,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 6,
   },
-  ticketCabeceraTexto: {
-    color: '#1A1A1A',
-    fontSize: 12,
-    fontWeight: '900',
-    letterSpacing: 2,
+  cajaTexto: {
+    color: COLORES.texto,
+    fontSize: 17,
     textAlign: 'center',
   },
-  filaTicket: {
+  textoSuave: {
+    color: COLORES.textoSuave,
+    fontSize: 15,
+    textAlign: 'center',
+    marginTop: 6,
+  },
+  filaResumen: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 18,
-    gap: 14,
-  },
-  filaTicketLinea: {
+    paddingVertical: 8,
+    gap: 16,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.12)',
+    borderBottomColor: 'rgba(255, 255, 255, 0.12)',
   },
-  filaTicketIzq: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
+  filaSinLinea: {
+    borderBottomWidth: 0,
   },
-  filaTicketIcono: { fontSize: 18 },
-  filaTicketEtiqueta: { color: '#B9B9B9', fontSize: 13, fontWeight: '700' },
-  filaTicketValor: {
-    color: '#FFFFFF',
+  filaEtiqueta: {
+    color: COLORES.textoSuave,
     fontSize: 15,
-    fontWeight: '800',
+  },
+  filaValor: {
+    color: COLORES.texto,
+    fontSize: 16,
+    fontWeight: 'bold',
     flexShrink: 1,
     textAlign: 'right',
   },
-
-  /* ---------- Bloque de datos ---------- */
-  bloqueDatos: {
-    backgroundColor: 'rgba(18,18,18,0.88)',
-    borderRadius: 20,
-    padding: 18,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.16)',
-    marginBottom: 18,
-  },
-  bloqueEncabezado: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 14 },
-  bloqueEmoji: { fontSize: 18 },
-  bloqueTitulo: { color: '#FFFFFF', fontSize: 18, fontWeight: '800' },
-  inputEtiqueta: {
-    color: '#C8C8C8',
-    fontSize: 13,
-    fontWeight: '700',
-    letterSpacing: 0.5,
-    marginBottom: 6,
-    marginTop: 4,
+  etiqueta: {
+    color: COLORES.texto,
+    fontSize: 15,
+    fontWeight: 'bold',
+    marginTop: 6,
+    marginBottom: 8,
   },
   input: {
-    height: 54,
-    borderRadius: 16,
-    paddingHorizontal: 16,
-    color: '#FFF',
-    fontSize: 16,
-    backgroundColor: 'rgba(255,255,255,0.09)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.22)',
-    marginBottom: 12,
-  },
-
-  /* ---------- Mensajes ---------- */
-  mensajeError: {
-    backgroundColor: 'rgba(255,107,107,0.14)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,107,107,0.45)',
+    height: 50,
     borderRadius: 14,
-    padding: 12,
-    marginBottom: 18,
-  },
-  mensajeErrorTexto: {
-    color: '#FFB4B0',
-    fontSize: 14,
-    textAlign: 'center',
-    fontWeight: '600',
-  },
-
-  /* ---------- Botón confirmar ---------- */
-  botonConfirmar: {
-    backgroundColor: '#F2EFEA',
-    height: 58,
-    borderRadius: 29,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: '#F28C28',
-  },
-  botonDeshabilitado: { opacity: 0.55 },
-  textoConfirmar: { color: '#1A1A1A', fontSize: 18, fontWeight: '800', letterSpacing: 0.5 },
-  notaFinal: {
-    color: '#B9B9B9',
-    fontSize: 12,
-    textAlign: 'center',
-    marginTop: 12,
-    marginBottom: 6,
-  },
-
-  /* ---------- Cajas (falta, éxito, hora tomada) ---------- */
-  caja: {
-    marginTop: 40,
-    padding: 28,
-    borderRadius: 24,
-    alignItems: 'center',
-    gap: 18,
-    backgroundColor: 'rgba(18,18,18,0.9)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.18)',
-  },
-  checkCirculo: {
-    width: 88,
-    height: 88,
-    borderRadius: 44,
-    backgroundColor: '#F28C28',
-    borderWidth: 3,
-    borderColor: '#FFFFFF',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 4,
-  },
-  checkTexto: { color: '#FFFFFF', fontWeight: '900', fontSize: 42 },
-  horaTomadaCirculo: {
-    width: 88,
-    height: 88,
-    borderRadius: 44,
-    backgroundColor: 'rgba(255,107,107,0.2)',
-    borderWidth: 2,
-    borderColor: 'rgba(255,138,128,0.6)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 4,
-  },
-  horaTomadaIcono: { fontSize: 44 },
-  cajaTitulo: {
-    color: '#FFFFFF',
-    fontSize: 26,
-    fontWeight: '800',
-    textAlign: 'center',
-  },
-  cajaTexto: {
-    color: '#E0E0E0',
-    fontSize: 17,
-    lineHeight: 26,
-    textAlign: 'center',
-  },
-  cajaTextoLight: {
-    color: '#C9C9C9',
+    paddingHorizontal: 14,
+    color: COLORES.texto,
     fontSize: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    borderWidth: 1,
+    borderColor: COLORES.borde,
+  },
+  textoError: {
+    color: COLORES.error,
+    fontSize: 15,
     textAlign: 'center',
+    marginBottom: 14,
+  },
+  botonConfirmar: {
+    backgroundColor: COLORES.crema,
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  botonApagado: {
+    opacity: 0.5,
+  },
+  textoConfirmar: {
+    color: COLORES.oscuro,
+    fontSize: 18,
+    fontWeight: 'bold',
   },
   botonClaro: {
-    backgroundColor: '#F2EFEA',
-    paddingHorizontal: 32,
-    paddingVertical: 14,
-    borderRadius: 26,
-    marginTop: 4,
-    borderWidth: 2,
-    borderColor: '#F28C28',
+    alignSelf: 'center',
+    backgroundColor: COLORES.crema,
+    paddingVertical: 12,
+    paddingHorizontal: 28,
+    borderRadius: 22,
+    marginTop: 12,
   },
   textoBotonClaro: {
-    color: '#1A1A1A',
+    color: COLORES.oscuro,
     fontSize: 16,
-    fontWeight: '800',
+    fontWeight: 'bold',
   },
 });
