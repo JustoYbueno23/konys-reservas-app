@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -18,12 +19,15 @@ import { obtenerMesasActivas } from '../services/mesas';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
-const BORDE = 'rgba(255, 255, 255, 0.6)';
-const CAJA = 'rgba(0, 0, 0, 0.45)';
-const BOTON = '#F28C28';
-const BOTON_TEXTO = '#FFFFFF';
-const CIRCULO = 150;
-const ANILLO = 190;
+const FONDO = require('../assets/images/fondos/postres.webp');
+
+const COLORES = {
+  naranja: '#F28C28',
+  crema: '#F2EFEA',
+  texto: '#FFFFFF',
+  textoSuave: '#E2E2E2',
+  borde: 'rgba(255, 255, 255, 0.45)',
+};
 
 export default function Inicio() {
   const router = useRouter();
@@ -32,8 +36,6 @@ export default function Inicio() {
   const [error, setError] = useState<string | null>(null);
   const [hasNavigated, setHasNavigated] = useState(false);
 
-  
-  
   useEffect(() => {
     let activo = true;
 
@@ -57,13 +59,14 @@ export default function Inicio() {
     }, [])
   );
 
-  
+  const irACarta = () => {
+    if (hasNavigated) return;
+    setHasNavigated(true);
+    router.push('/carta');
+  };
+
   const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const offsetY = event.nativeEvent.contentOffset.y;
-    if (offsetY > 100 && !hasNavigated) {
-      setHasNavigated(true);
-      router.push('/carta');
-    }
+    if (event.nativeEvent.contentOffset.y > 100) irACarta();
   };
 
   return (
@@ -77,49 +80,45 @@ export default function Inicio() {
         scrollEventThrottle={16}
         contentContainerStyle={styles.scrollContent}
       >
-        <ImageBackground
-          source={require('../assets/images/fondoInicio.jpg')}
-          style={styles.background}
-          resizeMode="cover"
-        >
-          <View style={styles.overlay} />
+        <ImageBackground source={FONDO} style={styles.background} resizeMode="cover">
+          <View style={styles.overlay} pointerEvents="none" />
 
-          
           <BotonAdmin tamano="grande" style={styles.adminUbicacion} />
 
           <View style={styles.content}>
-            <View style={styles.logoBox}>
-              <Text style={styles.logoText}>KONYS</Text>
+            <View style={styles.encabezado}>
+              <Text style={styles.kicker}>KONYS PIZZA · BUCARAMANGA</Text>
+              <Text style={styles.logo}>KONYS</Text>
+              <View style={styles.linea} />
+              <Text style={styles.eslogan}>La pizza más icónica de la ciudad</Text>
+              <View style={styles.horario}>
+                <Ionicons name="time-outline" size={16} color={COLORES.crema} />
+                <Text style={styles.horarioTexto}>12:30–2:30 · 5–11 p. m.</Text>
+              </View>
             </View>
 
-            <View style={styles.chip}>
-              <Text style={styles.chipText}>La pizza más icónica</Text>
-            </View>
+            <View style={styles.acciones}>
+              <Pressable style={styles.botonPrincipal} onPress={() => router.push('/reservar')}>
+                <Ionicons name="calendar-outline" size={22} color={COLORES.texto} />
+                <Text style={styles.botonPrincipalTexto}>Reservar mesa</Text>
+              </Pressable>
 
-            <View style={styles.chip}>
-              <Text style={styles.chipText}>12:30–2:30 · 5–11 p. m.</Text>
-            </View>
+              <Pressable style={styles.botonSecundario} onPress={irACarta}>
+                <Ionicons name="restaurant-outline" size={20} color={COLORES.crema} />
+                <Text style={styles.botonSecundarioTexto}>Ver la carta</Text>
+              </Pressable>
 
-            
-            <View style={styles.anillo}>
-              <Pressable
-                style={styles.reservarButton}
-                onPress={() => router.push('/reservar')}
-              >
-                <Text style={styles.reservarButtonText}>
-                  Reservar{'\n'}mesa
-                </Text>
+              <Pressable style={styles.enlaceUbicacion} onPress={() => router.push('/contacto')}>
+                <Ionicons name="location-outline" size={17} color={COLORES.crema} />
+                <Text style={styles.enlaceUbicacionTexto}>Ver ubicación</Text>
               </Pressable>
             </View>
 
-            <Pressable style={styles.ubicacionChip} onPress={() => router.push('/contacto')}>
-              <Text style={styles.ubicacionTexto}>Ubicación</Text>
-            </Pressable>
+            {error && <Text style={styles.estadoError}>{error}</Text>}
 
-            {error && <Text style={styles.estadoError}>Error: {error}</Text>}
-
-            <View style={styles.hint} pointerEvents="none">
-              <Text style={styles.hintText}>Desliza: ver la carta</Text>
+            <View style={styles.pista} pointerEvents="none">
+              <Ionicons name="chevron-down" size={18} color={COLORES.texto} />
+              <Text style={styles.pistaTexto}>Desliza para ver la carta</Text>
             </View>
           </View>
         </ImageBackground>
@@ -131,7 +130,7 @@ export default function Inicio() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000000',
+    backgroundColor: '#12100E',
   },
   scrollContent: {
     flexGrow: 1,
@@ -146,7 +145,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.55)',
+    backgroundColor: 'rgba(0, 0, 0, 0.62)',
   },
   adminUbicacion: {
     position: 'absolute',
@@ -155,104 +154,123 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   content: {
-    height: SCREEN_HEIGHT,
-    alignItems: 'center',
+    minHeight: SCREEN_HEIGHT,
+    paddingHorizontal: 26,
     paddingTop: SCREEN_HEIGHT * 0.2,
-    paddingHorizontal: 24,
-  },
-  logoBox: {
-    width: '72%',
-    paddingVertical: 14,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: BORDE,
-    backgroundColor: CAJA,
+    paddingBottom: 40,
     alignItems: 'center',
   },
-  logoText: {
-    fontSize: 52,
+  encabezado: {
+    alignItems: 'center',
+    width: '100%',
+  },
+  kicker: {
+    color: COLORES.crema,
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 3,
+    textAlign: 'center',
+  },
+  logo: {
+    color: COLORES.texto,
+    fontSize: 64,
     fontWeight: '800',
-    color: '#FFFFFF',
-    letterSpacing: 2,
+    letterSpacing: 8,
+    marginTop: 8,
+    textShadowColor: 'rgba(0,0,0,0.8)',
+    textShadowOffset: { width: 0, height: 3 },
+    textShadowRadius: 12,
   },
-  chip: {
+  linea: {
+    width: 64,
+    height: 3,
+    borderRadius: 2,
+    backgroundColor: COLORES.naranja,
+    marginTop: 10,
+  },
+  eslogan: {
+    color: COLORES.texto,
+    fontSize: 17,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginTop: 14,
+    textShadowColor: '#000',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 3,
+  },
+  horario: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
     marginTop: 12,
-    paddingHorizontal: 18,
-    paddingVertical: 8,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: BORDE,
-    backgroundColor: CAJA,
   },
-  chipText: {
-    color: '#FFFFFF',
+  horarioTexto: {
+    color: COLORES.textoSuave,
     fontSize: 15,
     fontWeight: '600',
-    textAlign: 'center',
   },
-  anillo: {
-    marginTop: SCREEN_HEIGHT * 0.1,
-    width: ANILLO,
-    height: ANILLO,
-    borderRadius: ANILLO / 2,
-    borderWidth: 2,
-    borderStyle: 'dashed',
-    borderColor: '#FFFFFF',
+  acciones: {
+    width: '100%',
+    marginTop: SCREEN_HEIGHT * 0.11,
+    gap: 14,
+  },
+  botonPrincipal: {
+    backgroundColor: COLORES.naranja,
+    height: 60,
+    borderRadius: 30,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 12,
   },
-  reservarButton: {
-    width: CIRCULO,
-    height: CIRCULO,
-    borderRadius: CIRCULO / 2,
-    backgroundColor: BOTON,
-    alignItems: 'center',
-    justifyContent: 'center',
-    elevation: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.4,
-    shadowRadius: 10,
-  },
-  reservarButtonText: {
-    color: BOTON_TEXTO,
-    fontSize: 20,
+  botonPrincipalTexto: {
+    color: COLORES.texto,
+    fontSize: 19,
     fontWeight: '800',
-    textAlign: 'center',
   },
-  ubicacionChip: {
-    marginTop: 14,
-    paddingHorizontal: 26,
-    paddingVertical: 10,
-    borderRadius: 22,
-    borderWidth: 1,
-    borderColor: BORDE,
-    backgroundColor: CAJA,
+  botonSecundario: {
+    height: 56,
+    borderRadius: 28,
+    borderWidth: 1.5,
+    borderColor: COLORES.borde,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
   },
-  ubicacionTexto: {
-    color: '#FFFFFF',
-    fontSize: 16,
+  botonSecundarioTexto: {
+    color: COLORES.crema,
+    fontSize: 17,
+    fontWeight: '700',
+  },
+  enlaceUbicacion: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 7,
+    paddingVertical: 6,
+  },
+  enlaceUbicacionTexto: {
+    color: COLORES.crema,
+    fontSize: 15,
     fontWeight: '600',
-    letterSpacing: 0.5,
   },
   estadoError: {
-    marginTop: 16,
-    color: '#FF6B6B',
+    marginTop: 18,
+    color: '#FF8A80',
     fontSize: 14,
     textAlign: 'center',
   },
-  hint: {
-    position: 'absolute',
-    bottom: 48,
-    alignSelf: 'center',
+  pista: {
+    marginTop: 30,
+    alignItems: 'center',
+    gap: 2,
   },
-  hintText: {
-    color: '#FFFFFF',
-    fontSize: 15,
+  pistaTexto: {
+    color: COLORES.texto,
+    fontSize: 13,
     fontWeight: '600',
-    opacity: 0.9,
-    textShadowColor: '#000000',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 3,
+    opacity: 0.85,
   },
 });
