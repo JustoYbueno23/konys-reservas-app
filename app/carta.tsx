@@ -1,12 +1,15 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Dimensions,
   FlatList,
   Image,
   ImageBackground,
   Modal,
+  PanResponder,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -17,6 +20,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { obtenerPlatosDisponibles } from '../services/platos';
 import { imagenPlato } from '../services/platos-imagenes';
 import { formatoPrecio } from '../utils/formato';
+
+const COLORES_PISTA = 'rgba(255, 255, 255, 0.75)';
+
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 const FONDO = require('../assets/images/fondos/pizzas.webp');
 
@@ -31,18 +38,18 @@ const fillStyle = {
 const CATEGORIAS = [
   { id: 'recomendados', label: 'Recomendados', imagen: require('../assets/images/categorias/recomendados.webp') },
   { id: 'entradas', label: 'Entradas', imagen: require('../assets/images/categorias/entradas.webp') },
-  { id: 'menu-infantil', label: 'Menú Infantil', imagen: require('../assets/images/categorias/menu-infantil.webp') },
+  { id: 'menu-infantil', label: 'MenÃº Infantil', imagen: require('../assets/images/categorias/menu-infantil.webp') },
   { id: 'pizzas', label: 'Pizzas', imagen: require('../assets/images/categorias/pizzas.webp') },
   { id: 'desgranados', label: 'Desgranados', imagen: require('../assets/images/categorias/desgranados.webp') },
-  { id: 'papas', label: 'Papas Ikónicas', imagen: require('../assets/images/categorias/papas.webp') },
-  { id: 'lasana', label: 'Lasaña', imagen: require('../assets/images/categorias/lasana.webp') },
+  { id: 'papas', label: 'Papas IkÃ³nicas', imagen: require('../assets/images/categorias/papas.webp') },
+  { id: 'lasana', label: 'LasaÃ±a', imagen: require('../assets/images/categorias/lasana.webp') },
   { id: 'granizados', label: 'Granizados', imagen: require('../assets/images/categorias/granizados.webp') },
   { id: 'sodas', label: 'Sodas', imagen: require('../assets/images/categorias/sodas.webp') },
-  { id: 'bebidas', label: 'Bebidas Frías', imagen: require('../assets/images/categorias/bebidas.webp') },
+  { id: 'bebidas', label: 'Bebidas FrÃ­as', imagen: require('../assets/images/categorias/bebidas.webp') },
   { id: 'cerveza', label: 'Cerveza', imagen: require('../assets/images/categorias/cerveza.webp') },
-  { id: 'cocteles', label: 'Cócteles', imagen: require('../assets/images/categorias/cocteles.webp') },
+  { id: 'cocteles', label: 'CÃ³cteles', imagen: require('../assets/images/categorias/cocteles.webp') },
   { id: 'postres', label: 'Postres', imagen: require('../assets/images/categorias/postres.webp') },
-  { id: 'almuerzos', label: 'Menú Almuerzos', imagen: require('../assets/images/categorias/almuerzos.webp') },
+  { id: 'almuerzos', label: 'MenÃº Almuerzos', imagen: require('../assets/images/categorias/almuerzos.webp') },
   { id: 'congelados', label: 'Congelados', imagen: require('../assets/images/categorias/congelados.webp') },
 ];
 
@@ -108,12 +115,35 @@ function FichaPlato({ plato, alCerrar }: { plato: Plato; alCerrar: () => void })
 }
 
 export default function Carta() {
+  const router = useRouter();
   const [seleccion, setSeleccion] = useState<string | null>(null);
   const [platos, setPlatos] = useState<Plato[]>([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [intento, setIntento] = useState(0);
   const [platoAbierto, setPlatoAbierto] = useState<Plato | null>(null);
+
+  const volverAlInicio = () => {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/');
+    }
+  };
+
+  const gesto = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => false,
+      onMoveShouldSetPanResponder: (_evento, estado) => {
+        if (platoAbierto) return false;
+        const inicio = estado.y0;
+        const desdeAbajo = inicio > SCREEN_HEIGHT * 0.78;
+        const subio = estado.dy < -80;
+        return desdeAbajo && subio && Math.abs(estado.dx) < 40;
+      },
+      onPanResponderGrant: () => volverAlInicio(),
+    })
+  ).current;
 
   useEffect(() => {
     let activo = true;
@@ -125,7 +155,7 @@ export default function Carta() {
 
       if (!activo) return;
       if (err) {
-        setError('No se pudo cargar la carta. Revisa tu conexión.');
+        setError('No se pudo cargar la carta. Revisa tu conexiÃ³n.');
       } else {
         setPlatos((data as Plato[]) || []);
       }
@@ -184,7 +214,7 @@ export default function Carta() {
       <ImageBackground source={FONDO} style={styles.fondo} resizeMode="cover">
         <View style={styles.overlay} pointerEvents="none" />
 
-        <SafeAreaView style={styles.container}>
+        <View style={styles.container} {...gesto.panHandlers}>
           <StatusBar style="light" />
 
           <View style={styles.encabezadoLista}>
@@ -236,7 +266,12 @@ export default function Carta() {
               );
             }}
           />
-        </SafeAreaView>
+
+          <View style={styles.pistaGesto} pointerEvents="none">
+            <Ionicons name="arrow-up" size={15} color={COLORES_PISTA} />
+            <Text style={styles.pistaGestoTexto}>Desliza desde abajo para volver al inicio</Text>
+          </View>
+        </View>
 
         {platoAbierto && (
           <FichaPlato plato={platoAbierto} alCerrar={() => setPlatoAbierto(null)} />
@@ -249,7 +284,7 @@ export default function Carta() {
     <ImageBackground source={FONDO} style={styles.fondo} resizeMode="cover">
       <View style={styles.overlay} pointerEvents="none" />
 
-      <SafeAreaView style={styles.container}>
+      <View style={styles.container} {...gesto.panHandlers}>
         <StatusBar style="light" />
 
         <View style={styles.encabezado}>
@@ -286,7 +321,12 @@ export default function Carta() {
             );
           })}
         </ScrollView>
-      </SafeAreaView>
+
+        <View style={styles.pistaGesto} pointerEvents="none">
+          <Ionicons name="arrow-up" size={15} color={COLORES_PISTA} />
+          <Text style={styles.pistaGestoTexto}>Desliza desde abajo para volver al inicio</Text>
+        </View>
+      </View>
     </ImageBackground>
   );
 }
@@ -504,6 +544,18 @@ const styles = StyleSheet.create({
     color: '#FFF',
     fontWeight: '800',
     fontSize: 16,
+  },
+  pistaGesto: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 10,
+  },
+  pistaGestoTexto: {
+    color: COLORES_PISTA,
+    fontSize: 12,
+    fontWeight: '600',
   },
   fichaPantalla: {
     flex: 1,
