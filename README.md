@@ -35,6 +35,7 @@ Aplicación móvil multiplataforma (Android e iOS) para reservar mesas en Konys 
 - `.gitignore` y `.env.example` incluidos.
 - Mockups de baja fidelidad (bocetos) en carpeta `/docs`.
 - Documento del proyecto en `/docs`.
+- Presentación de sustentación en Canva (enlace en la sección "Enlaces").
 - Variables de entorno del preview y production subidas a EAS.
 
 ### ⏳ Lo que falta por hacer
@@ -85,6 +86,8 @@ Para aplicar los datos iniciales al proyecto de Supabase:
 
 - APK Android para instalación y prueba: https://expo.dev/artifacts/eas/Aq1YT95nCJgYOyOSFoN9gKnXN2yRS4NebepAPrFkejQ.apk
 - Proyecto en Expo / Expo Go: https://expo.dev/accounts/juanmedinao3/projects/konys-reservas-app
+- Presentación / sustentación (Canva): https://www.canva.com/design/DAHbI5KiXUg/zoCEprHHhp1eFJcN-hnMgg/edit
+- Repositorio en GitHub: https://github.com/JustoYbueno23/konys-reservas-app
 - Video explicativo: (pendiente)
 
 ## Autor
