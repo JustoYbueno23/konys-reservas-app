@@ -83,7 +83,7 @@ Para aplicar los datos iniciales al proyecto de Supabase:
 
 ## Enlaces
 
-- APK Android (build anterior, antes del cambio de ícono): https://expo.dev/artifacts/eas/MUsoqLQc9S3F4xw80Epk3DH6u86qxq8o-Qgu5M9qsmU.apk
+- APK Android para instalación y prueba: https://expo.dev/artifacts/eas/Aq1YT95nCJgYOyOSFoN9gKnXN2yRS4NebepAPrFkejQ.apk
 - Proyecto en Expo / Expo Go: https://expo.dev/accounts/juanmedinao3/projects/konys-reservas-app
 - Video explicativo: (pendiente)
 
