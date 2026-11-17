@@ -41,8 +41,8 @@ Aplicación móvil multiplataforma (Android e iOS) para reservar mesas en Konys 
 ### ⏳ Lo que falta por hacer
 
 - iPhone: probar o demostrar la app en un iPhone con Expo Go (gratis, disponible en el App Store). Distribución nativa vía TestFlight requeriría el Apple Developer Program (USD $99/año, no requerido por el PDF).
-- Grabar video explicativo (5-8 minutos).
-- Recompilar el APK con todos los cambios del proyecto (ícono Konys, fotos del menú, pantalla de Ubicación, RLS y descripciones). El APK enlazado abajo corresponde a un build **anterior** al cambio de ícono.
+- Grabar video explicativo (5-8 minutos). ✅ Ya disponible en la sección "Enlaces".
+- Recompilar el APK con todos los cambios del proyecto (ícono Konys, fotos del menú, pantalla de Ubicación, RLS y descripciones). ✅ APK actualizado en la sección "Enlaces".
 - Pruebas en celular real y casos de error.
 
 ## Tecnologías
@@ -88,7 +88,7 @@ Para aplicar los datos iniciales al proyecto de Supabase:
 - Proyecto en Expo / Expo Go: https://expo.dev/accounts/juanmedinao3/projects/konys-reservas-app
 - Presentación / sustentación (Canva): https://www.canva.com/design/DAHbI5KiXUg/zoCEprHHhp1eFJcN-hnMgg/edit
 - Repositorio en GitHub: https://github.com/JustoYbueno23/konys-reservas-app
-- Video explicativo: (pendiente)
+- Video explicativo: https://youtu.be/ulLyQzf8vpE
 
 ## Autor
 
